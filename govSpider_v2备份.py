@@ -4,7 +4,8 @@ from PIL import Image
 from bs4 import BeautifulSoup
 from loguru import logger
 from lxml import etree
-import requests
+from curl_cffi import requests
+import requests as req
 import execjs
 import json
 import time
@@ -16,8 +17,6 @@ from geetest4_word import get_word_position
 from geetest4_phrase.predict import get_info
 from feapder.network.user_agent import get
 from pymongo import MongoClient
-from typing import Dict
-import threading
 import re
 import base64
 from Crypto.Cipher import AES
@@ -25,12 +24,15 @@ from Crypto.Util.Padding import pad, unpad
 import hashlib
 import iv8
 import urllib.parse
+import threading
 
 
-def proxy_list(force_refresh: bool = False) -> Dict[str, str] | None:
-    """为当前线程分配并缓存代理"""
+def proxy_list():
+    # return {
+    # "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
+    # "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
+    # }
     return None
-
 
 def safe_update(dst: dict, src: dict):
     """只更新合法 cookie（value 必须是 str/bytes）"""
@@ -38,25 +40,66 @@ def safe_update(dst: dict, src: dict):
         if isinstance(v, (str, bytes)):
             dst[k] = v
 
-
 def clean_cookie_dict(cookies: dict):
     """原地清洗非法 cookie"""
     bad_keys = [k for k, v in cookies.items() if not isinstance(v, (str, bytes))]
     for k in bad_keys:
         del cookies[k]
 
-
 # 全局 requests session（WAF穿透用）
-requests = requests.Session()
+requests = requests.Session(impersonate=random.choice(["edge99",
+    "edge101",
+    # Chrome
+    "chrome99",
+    "chrome100",
+    "chrome101",
+    "chrome104",
+    "chrome107",
+    "chrome110",
+    "chrome116",
+    "chrome119",
+    "chrome120",
+    "chrome123",
+    "chrome124",
+    "chrome131",
+    "chrome133a",
+    "chrome136",
+    "chrome142",
+    "chrome145",
+    "chrome146",
+    "safari153",
+    "safari155",
+    "safari170",
+    "safari180",
+    "safari184",
+    "safari260",
+    "safari2601",
+    "firefox133",
+    "firefox135",
+    "firefox144",
+    "firefox147",
+    "tor145",
+    "chrome",
+    "edge",
+    "safari",
+    "safari_beta",
+    "safari_ios_beta",
+    "firefox",
+    "safari15_3",
+    "safari15_5",
+    "safari17_0",
+    "safari18_0",
+    "safari18_4"
+]))
 functo_code = None
-rs_content = None
-
 
 class CT:
     """瑞数CT WAF 穿透层 — 处理 521→521→412 以及CT cookie生成"""
 
     def __init__(self):
         self.cookies = {}
+        self._cookies_lock = threading.Lock()
+        self._last_rs_content = None
         self.url = "https://shiming.gsxt.gov.cn/socialuser-use-rllogin.html"
         self.waf_url = "https://shiming.gsxt.gov.cn/ctct/nwaf/waf.log"
         self.proxies = proxy_list()
@@ -71,7 +114,7 @@ class CT:
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "same-origin",
             "Upgrade-Insecure-Requests": "1",
-            "User-Agent": get(),
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
             "sec-ch-ua": "\"Chromium\";v=\"148\", \"Google Chrome\";v=\"148\", \"Not/A)Brand\";v=\"99\"",
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": "\"Windows\""
@@ -197,31 +240,31 @@ class CT:
     def fetch(self, url):
         for _ in range(5):
             try:
-                response = requests.get(url, headers=self.headers, cookies=self.cookies, verify=False,
-                                        proxies=self.proxies)
+                response = req.get(url, headers=self.headers, cookies=self.cookies, verify=False, proxies=self.proxies)
                 if response.status_code == 200:
                     return response.text
                 elif response.status_code == 412:
+                    logger.success("Env Check PASS!!!")
                     self.cookies.update(response.cookies.get_dict())
                     return response.text
                 time.sleep(2)
             except Exception as e:
                 print(f"request_ct请求异常:{e},重试{_}/5 次")
-                time.sleep(2 ** _)
+                time.sleep(2**_)
         raise ConnectionError("网络链接异常")
 
     def fetch_waf(self, data):
         for _ in range(5):
             try:
-                response = requests.post(self.waf_url, headers=self.headers, cookies=self.cookies, data=data,
-                                         proxies=self.proxies)
+                response = requests.post(self.waf_url, headers=self.headers, cookies=self.cookies, data=data, proxies=self.proxies)
                 if response.status_code == 405:
                     return response.cookies['CT_1w0g8z10g']
                 time.sleep(2)
             except Exception as e:
                 print(f"request_ct请求异常:{e},重试{_}/5 次")
-                time.sleep(2 ** _)
+                time.sleep(2**_)
         raise ConnectionError("网络链接异常")
+
 
     def first_req(self, content):
         """处理412页面：提取JS、解密xyjgnaksf、生成CT cookies、获取RS6页面"""
@@ -233,38 +276,23 @@ class CT:
         xyjgnaksf = re.findall('= "(.*?)";', eehtml)[0]
         key = iv = xyjgnaksf[:4] + "1iuxaYxp0i#q"
         xyjgnaksfLocal = json.loads(self.AES_decrypt(xyjgnaksf[4:], key, iv))
-        print(xyjgnaksfLocal)
-
         CT_1rqu7ab01 = self.get_CT_1rqu7ab01(xyjgnaksfLocal, cthtml)
-        print("CT_1rqu7ab01: ", CT_1rqu7ab01)
-
         CT_16eadf26c = self.get_CT_16eadf26c(xyjgnaksfLocal)
-        print("CT_16eadf26c: ", CT_16eadf26c)
-
         CT_1f7ba0eb8 = self.get_CT_1f7ba0eb8()
-        print("CT_1f7ba0eb8: ", CT_1f7ba0eb8)
-
         CT_1g9aa1ec2 = self.get_uuid()
-        print("CT_1g9aa1ec2: ", CT_1g9aa1ec2)
-
         CT_1e6tzab00 = self.get_CT_1e6tzab00(xyjgnaksfLocal, CT_1g9aa1ec2)
-        print("CT_1e6tzab00: ", CT_1e6tzab00)
-
         self.cookies['CT_1rqu7ab01'] = CT_1rqu7ab01
         self.cookies['CT_16eadf26c'] = CT_16eadf26c
         self.cookies['CT_1f7ba0eb8'] = CT_1f7ba0eb8
         self.cookies['CT_1g9aa1ec2'] = CT_1g9aa1ec2
         self.cookies['CT_1e6tzab00'] = CT_1e6tzab00
-
         _0x5bbe33 = self.genum_random(4)
         text = '{"ips":["121.204.120.13"],"context":{"ua":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36","uach":{"brands":[{"brand":"Chromium","version":"148"},{"brand":"Google Chrome","version":"148"},{"brand":"Not/A)Brand","version":"99"}],"mobile":false,"platform":"Windows","hasOverride":false,"architecture":"x86","bitness":"64","formFactors":["Desktop"],"fullVersionList":[{"brand":"Chromium","version":"148.0.7778.217"},{"brand":"Google Chrome","version":"148.0.7778.217"},{"brand":"Not/A)Brand","version":"99.0.0.0"}],"model":"","platformVersion":"19.0.0","wow64":false},"browser":{"name":"Chrome","version":"148.0.7778.217","source":"uach","uach":{"name":"Chrome","version":"148.0.7778.217"},"ua":{"name":"Chrome","version":"148.0.0.0"},"shell":null},"os":{"name":"Windows","version":"19.0.0","uach":{"name":"Windows","version":"19.0.0"},"ua":{"name":"Windows","version":"10.0"},"source":"uach"},"engine":{"type":"Blink","source":"uach"},"screen":{"dpr":1.75,"cssWidth":836,"cssHeight":522.8571428571429,"cssMin":522.8571428571429,"hasTouch":false,"maxTouchPoints":10,"colorDepth":32,"pixelDepth":32},"mobile":{"isMobile":false,"source":"uach.mobile","confidence":"high","allDimensions":{"uachDisabled":false,"uachMobile":false,"platformMobile":false,"uaMobile":false,"touch":false,"smallScreen":true,"coarsePointer":false,"noHover":false}}},"checkRes":{"score":15,"tags":["mobile"],"reasons":["\\u79fb\\u52a8\\u7aef\\u68c0\\u6d4b\\u77db\\u76fe\\uff1anoHover=false \\u4e0e smallScreen=true \\u4e0d\\u4e00\\u81f4"]}}'
         key = iv = _0x5bbe33 + xyjgnaksfLocal['d92130a3ea_557685'][4:-4]
         data = _0x5bbe33 + self.AES_encrypt(text, key, iv)
         CT_1w0g8z10g = self.fetch_waf(data)
-        print("CT_1w0g8z10g: ", CT_1w0g8z10g)
         self.cookies['CT_1w0g8z10g'] = CT_1w0g8z10g
         rs_html = self.fetch(self.url)
-        logger.success(rs_html)
         return rs_html
 
 
@@ -284,11 +312,12 @@ class Hg(CT):
             "Sec-Fetch-Site": "none",
             "Sec-Fetch-User": "?1",
             "Upgrade-Insecure-Requests": "1",
-            "User-Agent": get(),
+            "User-Agent":get("chrome"),
             "sec-ch-ua": "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": "\"Windows\""
         }
+
 
     def jsl(self, content):
         """处理加速乐第一层 521 (JSFuck)"""
@@ -301,6 +330,7 @@ class Hg(CT):
         logger.info(f"加速乐第二次请求的状态码:{response}")
         return response.text
 
+
     def _encrypt(self, str, new_bts):
         if str == "sha256":
             return hashlib.sha256(new_bts.encode('utf-8')).hexdigest()
@@ -310,6 +340,7 @@ class Hg(CT):
             return hashlib.sha1(new_bts.encode('utf-8')).hexdigest()
         else:
             input(f"加密方式错误！{str}")
+
 
     def get_new_bts(self, godata):
         """破解加速乐第二层 521 (go())"""
@@ -331,8 +362,7 @@ class Hg(CT):
                 godata = json.loads(godata)
                 __jsl_clearance_s = self.get_new_bts(godata)
                 self.cookies.update({'__jsl_clearance_s': __jsl_clearance_s})
-                respones = requests.get(url=self.url, headers=self.headers, cookies=self.cookies, proxies=self.proxies,
-                                        timeout=(5, 15))
+                respones = requests.get(url=self.url, headers=self.headers, cookies=self.cookies, proxies=self.proxies, timeout=(5, 15))
                 if respones.status_code == 412 or respones.status_code == 200:
                     logger.info(f"加速乐第三次请求得到瑞数返回的状态码:{respones}")
                     return respones.text
@@ -353,6 +383,7 @@ class Hg(CT):
                 merged[k] = v
         return merged
 
+
     def iv8_env(self, rs_response):
         """用 iv8 执行RS6页面中的 m.js，获取 RS6 会话 cookie
 
@@ -361,7 +392,6 @@ class Hg(CT):
               - _publicKey: RSA 公钥（用于加密登录凭据）
               - fiKxeghI: RS6 会话token（= dUs8TeLcaHgjP cookie值，登录POST必需参数）
         """
-        logger.success(f'----------------瑞数----------------')
         environment = {
             "location": {
                 "ancestorOrigins": {},
@@ -410,35 +440,29 @@ class Hg(CT):
                         return entries[entries.length - 1].cookieHeader || '';
                     })()
                 """)
-
             # 重点：iv8 生成的新 cookie 不要单独用，要合并到前两步 cookies 里面。
             cookies = self.merge_cookie_header(cookies_str)
             self.cookies.update(cookies)
 
-            # 2. 携带完整 cookie 重新请求页面，拿到带 XHR hook 的真实页面 JS。
-            response = requests.get(page_url, headers=self.headers, cookies=self.cookies,
-                                    proxies=self.proxies, verify=False, timeout=(10, 20))
+    def get_publicKey(self):
+        for _ in range(5):
+            try:
+                response = requests.get(self.url, headers=self.headers, cookies=self.cookies, proxies=self.proxies,
+                                        verify=False, timeout=(10, 20))
+            except Exception as e:
+                logger.error(f"get_publicKey响应状态码 {response}:报错{e}")
+                continue
             if response.status_code == 200:
                 self.cookies.update(response.cookies.get_dict())
-                # 提取 RSA 公钥
                 pk_match = re.search(r'var\s+_publicKey\s*=\s*"(.*?)"', response.text)
                 _publicKey = pk_match.group(1).strip('"') if pk_match else None
-                logger.info(f"_publicKey: {_publicKey[:50] if _publicKey else 'None'}...")
-                # fiKxeghI = RS6 cookie dUs8TeLcaHgjP 的值
-                fiKxeghI = self.cookies.get("dUs8TeLcaHgjP", "")
-                logger.info(f"fiKxeghI: {fiKxeghI[:30] if fiKxeghI else 'None'}...")
-                return _publicKey, fiKxeghI
-            else:
-                logger.warning(f"iv8二次请求状态码: {response.status_code}，尝试从首次响应提取")
-                # 回退：从首次 rs_response 提取
-                pk_match = re.search(r'var\s+_publicKey\s*=\s*"(.*?)"', rs_response)
-                _publicKey = pk_match.group(1).strip('"') if pk_match else None
+                logger.info(f"获取密钥 publicKey 成功!!")
                 fiKxeghI = self.cookies.get("dUs8TeLcaHgjP", "")
                 return _publicKey, fiKxeghI
+        raise ConnectionError("获取publicKey失败！")
 
     def main_qe(self):
         """主WAF穿透流程: 521(JSFuck) → 521(go) → 412(CT cookies) → RS6(iv8) → 200(登录页)
-
         Returns:
             tuple: (_publicKey, fiKxeghI)
         """
@@ -452,10 +476,11 @@ class Hg(CT):
                     data = self.jsl(response.text)
                 else:
                     data = None
-                global rs_content
                 ct_content = self.resp_jsl(data)
                 rs_content = self.first_req(ct_content)
-                _publicKey, fiKxeghI = self.iv8_env(rs_content)
+                self.iv8_env(rs_content)
+                # 2. 携带完整 cookie 重新请求页面，拿到带 XHR hook 的真实页面 JS。
+                _publicKey, fiKxeghI=self.get_publicKey()
                 return _publicKey, fiKxeghI
             except Exception as e:
                 logger.warning(f"请求失败（尝试 {attempt + 1}/{max_retries}）: {str(e)}")
@@ -498,47 +523,31 @@ class JY(Hg):
     @staticmethod
     def base64_api_s(img):
         b64 = base64.b64encode(img).decode()
-        data = {"token": "6EubemuI0kmsMzHS6BjgVTBwMEu4uADPuXnJ30SwDr4", "type": "30114", "extra": "je4_phrase",
-                "image": b64}
-        resp = requests.post("http://api.jfbym.com/api/YmServer/customApi",
-                             headers={"Content-Type": "application/json"}, json=data).json()
+        data = {"token": "6EubemuI0kmsMzHS6BjgVTBwMEu4uADPuXnJ30SwDr4", "type": "30114", "extra": "je4_phrase", "image": b64}
+        resp = requests.post("http://api.jfbym.com/api/YmServer/customApi", headers={"Content-Type": "application/json"}, json=data).json()
         return resp["data"]["data"] if resp.get("code") == 10000 else "232,145|159,107|61,34"
 
     def load_jy(self):
         params = {"captcha_id": self.captcha_id, "client_type": "web", "lang": "zh-cn"}
-        resp = json.loads(
-            requests.get(url=self.url_wou, params=params, headers=self.headers).text.replace("(", "").replace(")", ""))
+        resp = json.loads(requests.get(url=self.url_wou, params=params, headers=self.headers).text.replace("(", "").replace(")", ""))
         data = resp["data"]
         info = {"type_name": data["captcha_type"], "process_token": data["process_token"], "payload": data["payload"],
                 "datetime": data["pow_detail"]["datetime"], "lot_number": data["lot_number"],
                 "hashfunc": data["pow_detail"]["hashfunc"], "bits": data["pow_detail"]["bits"],
                 "pt": data["pt"], "payload_protocol": data["payload_protocol"]}
         ct = info["type_name"]
-        if ct == "word":
-            info.update({"imgs_url": "http://static.geetest.com/" + data["imgs"], "ques_list": data["ques"]})
-        elif ct == "icon":
-            info.update({"imgs_url": "https://static.geetest.com/" + data["imgs"], "ques_list": data["ques"]})
-        elif ct == "phrase":
-            info.update({"slice_xiao": "https://static.geetest.com/" + data["imgs"]})
-        elif ct == "nine":
-            info.update({"slice_xiao": "https://static.geetest.com/" + data["imgs"],
-                         "bg_da": "https://static.geetest.com/" + data["ques"][0], "nine_nums": data["nine_nums"]})
+        if ct == "word": info.update({"imgs_url": "http://static.geetest.com/" + data["imgs"], "ques_list": data["ques"]})
+        elif ct == "icon": info.update({"imgs_url": "https://static.geetest.com/" + data["imgs"], "ques_list": data["ques"]})
+        elif ct == "phrase": info.update({"slice_xiao": "https://static.geetest.com/" + data["imgs"]})
+        elif ct == "nine": info.update({"slice_xiao": "https://static.geetest.com/" + data["imgs"], "bg_da": "https://static.geetest.com/" + data["ques"][0], "nine_nums": data["nine_nums"]})
         return info
 
     def get_random_str(self):
         return "".join(hex(int(65536 * (1 + random.random())))[3:] for _ in range(4))
 
-    def geetest_click(self, click_xy):
-        result = []
-        for x, y in [tuple(map(int, p.split(","))) for p in click_xy.split("|")]:
-            result.append([round(x / 300 * 10000), round(y / 200 * 10000)])
-        return result
 
     def get_sign(self, data):
-        lot = data["lot_number"];
-        hf = data["hashfunc"];
-        bits = data["bits"];
-        dt = data["datetime"]
+        lot = data["lot_number"]; hf = data["hashfunc"]; bits = data["bits"]; dt = data["datetime"]
         arg = {"passtime": random.randint(1700, 3500), "userresponse": data["click_smark"], "device_id": "",
                "lot_number": lot, "pow_msg": "", "geetest": "captcha", "lang": "zh", "ep": "123",
                "biht": "1426265548", "LldF": "7rCZ",
@@ -559,9 +568,10 @@ class JY(Hg):
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
         elif data.get("type_name") == "phrase":
             resp_bytes = requests.get(url=data["slice_xiao"]).content
-            coord_str = self.base64_api_s(resp_bytes)
-            click_list = [[int(x), int(y)] for p in coord_str.split("|") if len(parts := p.split(",")) == 2 for x, y in
-                          [parts]]
+            # coord_str = self.base64_api_s(resp_bytes)
+            coord_str = get_info(resp_bytes)
+            print("语序识别:",coord_str)
+            click_list = [[int(x), int(y)] for p in coord_str.split("|") if len(parts := p.split(",")) == 2 for x, y in [parts]]
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
             logger.info(f"语序点选坐标:{click_smark}")
         elif data.get("type_name") == "icon":
@@ -569,15 +579,11 @@ class JY(Hg):
             click_list = get_icon_position(requests.get(data["imgs_url"]).content, bl)
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
         elif data.get("type_name") == "nine":
-            tg = requests.get(data["bg_da"]).content
-            bg = requests.get(data["slice_xiao"]).content
-            im = Image.open(BytesIO(bg)).convert("RGBA")
-            buf = BytesIO()
-            im.save(buf, format="PNG")
+            tg = requests.get(data["bg_da"]).content; bg = requests.get(data["slice_xiao"]).content
+            im = Image.open(BytesIO(bg)).convert("RGBA"); buf = BytesIO(); im.save(buf, format="PNG")
             click_smark, qc = get_nine_position(tg, split_image(buf.getvalue()), data["nine_nums"])
         else:
-            logger.warning(f"未知验证码类型: {data.get('type_name')}")
-            click_smark = None
+            logger.warning(f"未知验证码类型: {data.get('type_name')}"); click_smark = None
         data["click_smark"] = click_smark
         return self.get_sign(data), data
 
@@ -596,18 +602,13 @@ class JY(Hg):
                 params = {"captcha_id": self.captcha_id, "client_type": "web", "lot_number": data["lot_number"],
                           "payload": data["payload"], "process_token": data["process_token"],
                           "payload_protocol": data["payload_protocol"], "pt": data["pt"], "w": w}
-                resp = json.loads(
-                    requests.get("https://gcaptcha4.geetest.com/verify", headers=h, params=params).text.replace("(",
-                                                                                                                "").replace(
-                        ")", ""))
+                resp = json.loads(requests.get("https://gcaptcha4.geetest.com/verify", headers=h, params=params).text.replace("(", "").replace(")", ""))
                 if resp["data"]["result"] == "success":
                     logger.success("验证码识别成功！！")
-                    return {"captcha_output": resp["data"]["seccode"]["captcha_output"],
-                            "gen_time": resp["data"]["seccode"]["gen_time"],
-                            "lot_number": resp["data"]["seccode"]["lot_number"],
-                            "pass_token": resp["data"]["seccode"]["pass_token"]}
+                    return {"captcha_output": resp["data"]["seccode"]["captcha_output"], "gen_time": resp["data"]["seccode"]["gen_time"],
+                            "lot_number": resp["data"]["seccode"]["lot_number"], "pass_token": resp["data"]["seccode"]["pass_token"]}
             except Exception as e:
-                logger.warning(f"验证码识别失败 ({attempt + 1}/10): {e}")
+                logger.warning(f"验证码识别失败 ({attempt+1}/10): {e}")
                 if attempt == 9: raise
 
 
@@ -615,120 +616,249 @@ class Govspider(JY):
 
     def __init__(self):
         super().__init__()
-        self.headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Pragma": "no-cache",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
-            "User-Agent": get(),
-            "sec-ch-ua": "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\""
-        }
-        self.backcomp = []
-        self.processed_codes = set();
-        self.PROCESSED_CODES_KEY = "gov:processed_codes"
+        self.headers = {"Accept": "*/*", "Accept-Language": "zh-CN,zh;q=0.9", "Cache-Control": "no-cache",
+                        "Connection": "keep-alive", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        "Origin": "https://shiming.gsxt.gov.cn", "Pragma": "no-cache",
+                        "Referer": "https://shiming.gsxt.gov.cn/socialuser-use-rllogin.html",
+                        "Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Site": "same-origin",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+                        "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\""}
+        self.CURRENT_ACCOUNT_KEY = "gov:01"; self.backcomp = []
+        self.processed_codes = set(); self.PROCESSED_CODES_KEY = "gov:processed_codes"
+        self.mongo_client = MongoClient(host="192.168.6.167", port=27017)
+        self.mongo_db = self.mongo_client["gov_spider"]
+        self.shareholder_collection = self.mongo_db["shareholder_data"]
+        self.shareholder_coll2 = self.mongo_db["shareholder_type"]
+        self.equity_collection = self.mongo_db["equity_data"]
+        self.Intellectual_property = self.mongo_db["intell_property"]
+        self.trademark_info = self.mongo_db["trademark_info"]
+        self.login_url="https://shiming.gsxt.gov.cn/socialuser-use-login-request.html"
 
-
-    @retry(stop_max_attempt_number=5, wait_fixed=1000)
     def unified_request(self, url, method, params=None, data=None, json_data=None,
-                        timeout=(10, 20), custom_headers=None, custom_cookie=None, retry_func=None,
-                        allow_redirects=True, **kwargs):
-        try:
-            if method.upper() == "GET":
-                r = requests.get(url=url, headers=self.headers, cookies=self.cookies, params=params,
-                                 proxies=self.proxies, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
-            elif method.upper() == "POST":
-                r = requests.post(url=url, headers=self.headers, cookies=self.cookies, params=params, data=data,
-                                  json=json_data, proxies=self.proxies, timeout=timeout,
-                                  allow_redirects=allow_redirects, **kwargs)
-            else:
-                raise ValueError(f"不支持的方法: {method}")
-            if r.status_code == 200:
-                if "NGIDERRORCODE" in r.text: logger.error("账号异常！！")
-                return r
-            elif r.status_code == 412:
-                try:
-                    self.iv8_env(r.text)
-                except Exception as e:
-                    logger.info(f"412出错: {e}")
-                if retry_func: return retry_func()
-                raise ConnectionError("412")
-            elif r.status_code == 521:
-                try:
-                    self.url = url; self.iv8_env(self.resp_jsl(self.jsl(r.text)))
-                except Exception as e:
-                    logger.info(f"521出错: {e}")
-                if retry_func: return retry_func()
-                raise ConnectionError("521")
-            elif r.status_code == 403:
-                time.sleep(5);
-                self.proxies = proxy_list()
-                if retry_func: return retry_func()
-                raise ConnectionError("403")
-            raise ConnectionError(f"状态码 {r.status_code}")
-        except Exception as e:
-            if retry_func: return retry_func()
-            raise e
+                        timeout=(10, 20), custom_headers=None, custom_cookie=None, retry_func=None, **kwargs):
+        """
+        统一的HTTP请求方法，封装所有请求的通用逻辑
 
+        Args:
+            url: 请求URL
+            method: 请求方法 ('GET' 或 'POST')
+            params: URL参数 (GET请求)
+            data: 表单数据 (POST请求)
+            json_data: JSON数据 (POST请求)
+            timeout: 超时时间
+            custom_headers: 自定义请求头
+            custom_cookie: 自定义cookies字典
+            retry_func: 重试时调用的函数
+            **kwargs: 其他参数
+
+        Returns:
+            response: requests.Response对象
+        """
+        # 合并自定义请求头
+        # headers = self.headers.copy()
+        # if custom_headers:
+        #     headers.update(custom_headers)
+        if custom_cookie:
+            self.cookies.update(custom_cookie)
+        try:
+            if method.upper() == 'GET':
+                response = requests.get(
+                    url=url,
+                    headers=custom_headers if custom_headers else self.headers,
+                    cookies=self.cookies,
+                    params=params,
+                    proxies=self.proxies,
+                    timeout=timeout,
+                    **kwargs
+                )
+            elif method.upper() == 'POST':
+                response = requests.post(
+                    url=url,
+                    headers=custom_headers if custom_headers else self.headers,
+                    cookies=self.cookies,
+                    params=params,
+                    data=data,
+                    json=json_data,
+                    proxies=self.proxies,
+                    timeout=timeout,
+                    **kwargs
+                )
+            else:
+                raise ValueError(f"不支持的请求方法: {method}")
+            # 处理响应状态码
+            if response.status_code == 200:
+                with open("Node_control/unified_request_200.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                if "NGIDERRORCODE" in response.text:
+                    logger.error("账号异常！！切换账号。。。。")
+                    # user = self.ltouser()
+                    # self.next_login(user)
+                    raise "重试！！"
+                else:
+                    return response
+            elif response.status_code == 412:
+                with open("Node_control/unified_request_412.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                try:
+                    logger.info(
+                        f"代理412信息：{requests.get('https://myip.ipip.net', proxies=self.proxies, timeout=(5, 10)).text}")
+                except:
+                    pass
+                try:
+                    # rs_content = response.text
+                    # content, ts_js, jsurl = self.main_rs_info(response.text)
+                    # self.execjs_data(content,ts_js,jsurl)
+                    self.iv8_env(response.text)
+                except Exception as e:
+                    logger.info(f"处理412状态码时出错: {e}")
+                if retry_func:
+                    return retry_func()
+                else:
+                    raise ConnectionError("412状态码，需要重试")
+            elif response.status_code == 521:
+                with open("Node_control/unified_request_521.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                try:
+                    logger.info(
+                        f"代理521信息：{requests.get('https://myip.ipip.net', proxies=self.proxies, timeout=(5, 10)).text}")
+                except:
+                    pass
+                try:
+                    logger.info(f"加速乐第一次请求的状态码:{response}")
+                    self.url = url
+                    data = self.jsl(response.text)
+                    ct_content = self.resp_jsl(data)
+                    self._last_rs_content = self.first_req(ct_content)
+                    self.iv8_env(self._last_rs_content)
+                except Exception as e:
+                    logger.info(f"处理521状态码时出错: {e}")
+                if retry_func:
+                    return retry_func()
+                else:
+                    raise ConnectionError("521状态码，需要重试")
+            elif response.status_code == 403:
+                with open("Node_control/unified_request_403.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                try:
+                    logger.info(
+                        f"代理403信息：{requests.get('https://myip.ipip.net', proxies=self.proxies, timeout=(5, 10)).text}")
+                except:
+                    pass
+                time.sleep(5)
+                self.proxies = proxy_list()
+                if retry_func:
+                    return retry_func()
+                else:
+                    raise ConnectionError("403状态码，需要重试")
+            elif response.status_code == 400:
+                with open("Node_control/unified_request_400.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                logger.warning(f"unified_request 400错误，链接:{url}")
+                if retry_func:
+                    return retry_func()
+                else:
+                    raise ConnectionError(f"400 Bad Request: {url}")
+            else:
+                with open(f"Node_control/unified_request_{response.status_code}.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                raise ConnectionError(f"未识别unified_request请求验证码{response}:需要重试")
+        except Exception as e:
+            if retry_func:
+                return retry_func()
+            else:
+                raise e
     @property
     def cookie(self):
         return self.get_fresh_cookie()
 
+
     def get_fresh_cookie(self):
-        try:
-            self.iv8_env(rs_content)
-        except Exception as e:
-            logger.error(f"get_fresh_cookie: {e}")
+        try: self.iv8_env(self._last_rs_content)
+        except Exception as e: logger.error(f"get_fresh_cookie: {e}")
         return self.cookies.copy() if isinstance(self.cookies, dict) else {}
 
+    def _ensure_session_fresh(self):
+        """轻量级探测：GET首页检查cookie是否新鲜，遇521/412自动恢复"""
+        for attempt in range(3):
+            try:
+                resp = requests.get(
+                    "https://shiming.gsxt.gov.cn/index.html",
+                    headers=self.headers, cookies=self.cookies,
+                    proxies=self.proxies, timeout=(10, 15), verify=False
+                )
+                if resp.status_code == 200:
+                    safe_update(self.cookies, resp.cookies.get_dict())
+                    return True
+                elif resp.status_code in (521, 412):
+                    logger.warning(f"[Session] 收到{resp.status_code}, 刷新WAF...")
+                    if resp.status_code == 521:
+                        safe_update(self.cookies, resp.cookies.get_dict())
+                        data = self.jsl(resp.text)
+                        ct_content = self.resp_jsl(data)
+                        self._last_rs_content = self.first_req(ct_content)
+                    else:  # 412
+                        safe_update(self.cookies, resp.cookies.get_dict())
+                        self._last_rs_content = resp.text
+                    self.iv8_env(self._last_rs_content)
+                else:
+                    logger.warning(f"[Session] 探测返回{resp.status_code}")
+            except Exception as e:
+                logger.warning(f"[Session] 探测异常(attempt {attempt+1}/3): {e}")
+                time.sleep(2)
+        logger.error("[Session] 刷新失败!")
+        return False
+
+
     def loginuser(self, user, params):
-        login_js = execjs.compile(open("login.js", "r", encoding="utf-8").read())
-        enc = login_js.call("f", self._publicKey, user["pwd"], user["user"])
-        data = {"un": enc["un"], "gp": enc["gp"], "lot_number": params["lot_number"],
-                "captcha_output": params["captcha_output"], "pass_token": params["pass_token"],
-                "gen_time": params["gen_time"], "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
-                "fiKxeghI": self.fiKxeghI}
-        url = "https://shiming.gsxt.gov.cn/socialuser-use-login-request.html"
-        rt = lambda: self.unified_request(url=url, method="POST", data=data, timeout=(5, 15), retry_func=None,
-                                          allow_redirects=False)
-        r = self.unified_request(url=url, method="POST", data=data, timeout=(5, 10), retry_func=rt,
-                                 allow_redirects=False)
-        logger.info(f"loginuser: status={r.status_code}")
-        if r.status_code in (200, 302):
-            if r.status_code == 302:
-                logger.success("登录成功(302)")
-            elif r.status_code == 200:
-                try:
-                    rj = r.json()
-                    if rj.get("success") and rj.get("value") == "1":
-                        logger.success("登录成功")
-                    else:
-                        logger.warning(f"登录异常: {rj}"); return False
-                except:
-                    pass
-            ir = requests.get("https://shiming.gsxt.gov.cn/index.html", headers=self.headers, cookies=self.cookies,
-                              proxies=self.proxies, timeout=(10, 20), verify=False)
-            safe_update(self.cookies, ir.cookies.get_dict())
-            if ir.status_code == 200:
-                self.iv8_env(ir.text)
-                logger.success("首页cookie已更新")
-            return True
-        logger.error(f"登录失败: {r.status_code}")
+        for _ in range(5):
+            try:
+                login_js = execjs.compile(open("login.js", "r", encoding="utf-8").read())
+                enc = login_js.call("f", self._publicKey, user["pwd"], user["user"])
+                data = {"un": enc["un"], "gp": enc["gp"], "lot_number": params["lot_number"],
+                        "captcha_output": params["captcha_output"], "pass_token": params["pass_token"],
+                        "gen_time": params["gen_time"], "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
+                        "fiKxeghI": self.fiKxeghI}
+                rt = lambda: self.unified_request(url=self.login_url, method="POST", data=data, timeout=(5, 15), retry_func=None,
+                                                  allow_redirects=False)
+                response = self.unified_request(url=self.login_url, method="POST", data=data, timeout=(5, 10), retry_func=rt,
+                                         allow_redirects=False)
+                logger.info(f"loginuser: status={response.status_code}")
+                if response.status_code in (200, 302):
+                    if response.status_code == 302:
+                        logger.success("登录成功(302)")
+                    elif response.status_code == 200:
+                        try:
+                            rj = response.json()
+                            if rj.get("success") and rj.get("value") == "1":
+                                logger.success("登录成功")
+                            else:
+                                logger.warning(f"登录异常: {rj}");
+                                return False
+                        except:
+                            pass
+                    ir = requests.get("https://shiming.gsxt.gov.cn/index.html", headers=self.headers,
+                                      cookies=self.cookies,
+                                      proxies=self.proxies, timeout=(10, 20), verify=False)
+                    safe_update(self.cookies, ir.cookies.get_dict())
+                    if ir.status_code == 200:
+                        self._last_rs_content = ir.text
+                        self.iv8_env(ir.text)
+                        logger.success("首页cookie已更新")
+                    return True
+                else:
+                    logger.error(f"登陆异常响应码:{response}")
+            except Exception as e:
+                logger.error(f"loginuser登陆失败: {e}")
+        logger.error(f"登录失败: {response.status_code}")
         return False
 
     @retry(wait_fixed=1000)
     def nextcompany(self, data_list, company, param, page):
         while True:
             url = "https://shiming.gsxt.gov.cn/corp-query-search-advancetest.html"
-            params = {"searchword": company, "lot_number": param["lot_number"],
-                      "captcha_output": param["captcha_output"],
+            params = {"searchword": company, "lot_number": param["lot_number"], "captcha_output": param["captcha_output"],
                       "pass_token": param["pass_token"], "gen_time": param["gen_time"],
                       "captchaId": "b608ae7850d2e730b89b02a384d6b9cc", "token": "90117940",
                       "tab": "ent_tab", "province": "", "page": page,
@@ -739,103 +869,70 @@ class Govspider(JY):
                 data_list += self.getdata(etree.HTML(r.text))
                 if page >= 7: return data_list
                 page += 1
-            elif r.status_code == 403:
-                time.sleep(30); raise Exception("ip检测")
-            else:
-                return data_list
+            elif r.status_code == 403: time.sleep(30); raise Exception("ip检测")
+            else: return data_list
+
 
     def searchcompany(self, company, page):
-        while True:
+        for _ in range(5):
             try:
-                params = self.send()
-                # print("验证码结果:",params)
+                p = self.send()
                 url = "https://shiming.gsxt.gov.cn/corp-query-search-1.html"
-                data = {
-                    "tab": "ent_tab",
-                    "province": "",
-                    "geetest_challenge": "",
-                    "geetest_validate": "",
-                    "geetest_seccode": "",
-                    "lot_number": params["lot_number"],
-                    "captcha_output": params["captcha_output"],
-                    "pass_token": params["pass_token"],
-                    "gen_time": params["gen_time"],
-                    "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
-                    "token": "2016",
-                    "searchword": company,
-                    "page": page
+                headers={
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Language": "zh-CN,zh;q=0.9",
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Origin": "https://shiming.gsxt.gov.cn",
+                    "Pragma": "no-cache",
+                    "Referer": "https://shiming.gsxt.gov.cn/index.html",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-User": "?1",
+                    "Upgrade-Insecure-Requests": "1",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+                    "sec-ch-ua": "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": "\"Windows\""
                 }
-
-                def retry_func():
-                    # 重新获取验证码参数
-                    params = self.send()
-                    data.update({
-                        "lot_number": params["lot_number"],
-                        "captcha_output": params["captcha_output"],
-                        "pass_token": params["pass_token"],
-                        "gen_time": params["gen_time"],
-                    })
-                    return self.unified_request(
-                        url=url,
-                        method='POST',
-                        data=data,
-                        timeout=(5, 15),
-                        custom_cookie=self.cookie,
-                        retry_func=None  # 避免无限递归
-                    )
-
-                response = self.unified_request(
-                    url=url,
-                    method='POST',
-                    data=data,
-                    timeout=(5, 15),
-                    custom_cookie=self.cookie,
-                    retry_func=retry_func)
-                logger.info(f"searchcompany状态码:{response}")
-                if response.status_code == 200:
-                    content_type = response.headers['Content-Type']
-                    print("searchcompany数据类型：", content_type)
-                    if 'text/html' in content_type:
-                        global rs_content
-                        rs_content = response.text
-                        self.iv8_env(response.text)
-                    try:
-                        if "NGIDERRORCODE" in response.text:
-                            logger.error("账号异常！！切换账号。。。。")
-                        else:
-                            logger.info("---------------------首次搜索-----------------------")
-                            html = etree.HTML(response.text)
-                            divs = html.xpath('//*[@id="advs"]/div/div[2]')
-                            if divs:
-                                try:
-                                    total_page = html.xpath('//div[@class="search_result"]/span/text()')[0]
-                                except:
-                                    try:
-                                        total_page = html.xpath('//*[@id="advs"]/div/div[1]/span/text()')[0]
-                                    except:
-                                        total_page = 1
-                                if int(total_page) >= 1000:
-                                    datalist = self.getdata(html)
-                                    page += 1
-                                    item = self.nextcompany([], company, params, page)
-                                    datalist += item
-                                    return datalist
-                                else:
-                                    try:
-                                        return self.getdata(html)
-                                    except Exception as e2:
-                                        print(e2)
-                            else:
-                                return None
-                    except Exception as e1:
-                        print(e1)
+                data = {"tab": "ent_tab", "province": "", "geetest_challenge": "", "geetest_validate": "",
+                        "geetest_seccode": "",
+                        "lot_number": p["lot_number"], "captcha_output": p["captcha_output"],
+                        "pass_token": p["pass_token"], "gen_time": p["gen_time"],
+                        "captchaId": "b608ae7850d2e730b89b02a384d6b9cc", "token": "88379074",
+                        "searchword": company, "page": page}
+                def rt():
+                    p2 = self.send()
+                    for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]: data[k] = p2[k]
+                    return self.unified_request(url=url, method="POST", data=data, timeout=(5, 15),custom_headers=headers,
+                                                custom_cookie=self.cookie, retry_func=None)
+                r = self.unified_request(url=url, method="POST", data=data,custom_headers=headers, timeout=(5, 15),custom_cookie=self.cookie, retry_func=rt)
+                if r.status_code == 200:
+                    if "NGIDERRORCODE" in r.text: raise ConnectionError("账号异常")
+                    html = etree.HTML(r.text)
+                    if html.xpath("//*[@id='advs']/div/div[2]"):
+                        try:
+                            tp = int(html.xpath("//div[@class='search_result']/span/text()")[0])
+                        except:
+                            try:
+                                tp = int(html.xpath("//*[@id='advs']/div/div[1]/span/text()")[0])
+                            except:
+                                tp = 1
+                        if tp >= 1000:
+                            dl = self.getdata(html)
+                            page += 1
+                            return dl + (self.nextcompany([], company, p, page) or [])
+                        return self.getdata(html)
+                    return None
             except Exception as e:
                 print(e)
+        raise ConnectionError(f"searchcompany搜索公司异常!!")
 
     # ================================================================
     # 数据解析工具
     # ================================================================
-
     def is_chinese(self, text):
         """判断文本是否为纯中文"""
         chinese_pattern = re.compile(
@@ -902,7 +999,6 @@ class Govspider(JY):
             if response.text:
                 soup = BeautifulSoup(response.text, "html.parser")
                 self.cookies.update(response.cookies.get_dict())
-
                 # --- 提取各板块API端点 ---
                 def extract_url(var_name):
                     """从页面JS变量中提取API URL"""
@@ -915,18 +1011,17 @@ class Govspider(JY):
                             return "https://shiming.gsxt.gov.cn" + match.group(1)
                         logger.info(f"未找到{var_name}")
                         return None
-
-                bgurl = extract_url("alterInfoUrl")  # 工商变更
-                shaurl = extract_url("shareholderUrl")  # 股东信息
-                spurl = extract_url("getFoodChkInfoUrl")  # 食品检测
-                gdurl = extract_url("insInvinfoUrl")  # 股东出资
+                bgurl = extract_url("alterInfoUrl")        # 工商变更
+                shaurl = extract_url("shareholderUrl")      # 股东信息
+                spurl = extract_url("getFoodChkInfoUrl")    # 食品检测
+                gdurl = extract_url("insInvinfoUrl")        # 股东出资
                 xlurl = extract_url("IntellectualInfoUrl")  # 知识产权
-                nburl = extract_url("anCheYearInfo")  # 年报年份
-                banurl = extract_url("annRepDetailUrl")  # 年报详情
-                sburl = extract_url("allTrademarkUrl")  # 商标
-                cpjdurl = extract_url("eproquacheckUrl")  # 产品质量
-                ssjurl = extract_url("getDrRaninsResUrl")  # 双随机抽查
-                xzurl = extract_url("nLicUrl")  # 行政许可
+                nburl = extract_url("anCheYearInfo")        # 年报年份
+                banurl = extract_url("annRepDetailUrl")     # 年报详情
+                sburl = extract_url("allTrademarkUrl")      # 商标
+                cpjdurl = extract_url("eproquacheckUrl")    # 产品质量
+                ssjurl = extract_url("getDrRaninsResUrl")   # 双随机抽查
+                xzurl = extract_url("nLicUrl")              # 行政许可
 
                 # --- 提取基本工商信息 ---
                 def clean_key(key):
@@ -993,10 +1088,7 @@ class Govspider(JY):
                         for tr in trs:
                             tds = tr.find_all("td")
                             if len(tds) >= 2:
-                                key_text = tds[0].get_text(strip=True).replace('\xa0', '').replace('\u2003',
-                                                                                                   '').replace('\u2002',
-                                                                                                               '').replace(
-                                    '\u2009', '')
+                                key_text = tds[0].get_text(strip=True).replace('\xa0', '').replace('\u2003', '').replace('\u2002', '').replace('\u2009', '')
                                 if "营业期限" in key_text or "合伙期限" in key_text:
                                     result["yyqx"] = tds[1].get_text(strip=True)
                                     break
@@ -1006,16 +1098,22 @@ class Govspider(JY):
                 # 构建返回
                 comlist = {
                     "company": info["name"],
-                    "bgurl": bgurl, "shaurl": shaurl, "spurl": spurl,
-                    "gdurl": gdurl, "xlurl": xlurl,
-                    "nburl": nburl, "banurl": banurl, "sburl": sburl,
-                    "cpjdurl": cpjdurl, "ssjurl": ssjurl, "xzurl": xzurl
+                    "bgurl": bgurl,
+                    "shaurl": shaurl,
+                    "spurl": spurl,
+                    "gdurl": gdurl,
+                    "xlurl": xlurl,
+                    "nburl": nburl,
+                    "banurl": banurl,
+                    "sburl": sburl,
+                    "cpjdurl": cpjdurl,
+                    "ssjurl": ssjurl,
+                    "xzurl": xzurl
                 }
                 return comlist, result
         else:
             try:
-                logger.info("vhpage代理信息:{}".format(
-                    requests.get("https://myip.ipip.net", proxies=self.proxies, timeout=(5, 10)).text))
+                logger.info("vhpage代理信息:{}".format(requests.get("https://myip.ipip.net", proxies=self.proxies, timeout=(5, 10)).text))
             except:
                 pass
             return self.vhpage(info)
@@ -1029,13 +1127,16 @@ class Govspider(JY):
             h_f = elem.xpath('./@href')
             h_f = h_f[0] if h_f else ""
             link = "https://shiming.gsxt.gov.cn" + h_f if h_f and h_f != "javascript:void(0)" else None
+            # 公司名称
             name = "".join(elem.xpath('.//h1//text()')).replace('\n', '').strip()
+            ## 企业状态
             status = elem.xpath('.//div[contains(@class,"wrap-corpStatus")]/span/text()')
             business_status = status[0].strip() if status else ""
+            ## 统一社会信用代码
             uscc = elem.xpath('.//div[contains(@class,"div-map2")]//span[@class="g3"]/text()')
             tyxydm = uscc[0].strip() if uscc else ""
-            regno = elem.xpath(
-                './/div[contains(@class,"div-info-circle3")][contains(., "注册号")]//span[@class="g3"]/text()')
+
+            regno = elem.xpath('.//div[contains(@class,"div-info-circle3")][contains(., "注册号")]//span[@class="g3"]/text()')
             gszch = regno[0].strip() if regno else ""
             date = elem.xpath('.//div[contains(@class,"div-info-circle2")]//span[@class="g3"]/text()')
             dateOfEstablishment = date[0].strip() if date else ""
@@ -1061,8 +1162,7 @@ class Govspider(JY):
                             break
                     if found:
                         break
-            hist_name_div = elem.xpath(
-                './/div[contains(@class,"div-info-circle3")][contains(text(), "历史名称") or contains(., "历史名称")]')
+            hist_name_div = elem.xpath('.//div[contains(@class,"div-info-circle3")][contains(text(), "历史名称") or contains(., "历史名称")]')
             oldCompanyNameList = []
             if hist_name_div:
                 hist_name_span = hist_name_div[0].xpath('.//span[@class="g3"]')
@@ -1072,14 +1172,17 @@ class Govspider(JY):
                     oldCompanyNameList = hl.replace("；", ",").split(",") if str(hl) else []
                     if self.contains_html_or_name_colon(oldCompanyNameList):
                         oldCompanyNameList = ["".join(oldCompanyNameList).split("名称:")[-1]]
-            unique_key = (
-            name, link, legalName, business_status, gszch, tyxydm, dateOfEstablishment, ",".join(oldCompanyNameList))
+            unique_key = (name, link, legalName, business_status, gszch, tyxydm, dateOfEstablishment, ",".join(oldCompanyNameList))
             if unique_key not in seen:
                 seen.add(unique_key)
                 hrefs = {
-                    "name": name, "link": link, "legalName": legalName,
-                    "business_status": business_status, "gszch": gszch,
-                    "tyxydm": tyxydm, "dateOfEstablishment": dateOfEstablishment,
+                    "name": name,
+                    "link": link,
+                    "legalName": legalName,
+                    "business_status": business_status,
+                    "gszch": gszch,
+                    "tyxydm": tyxydm,
+                    "dateOfEstablishment": dateOfEstablishment,
                     "oldCompanyNameList": oldCompanyNameList
                 }
                 herf_list.append(hrefs)
@@ -1133,8 +1236,7 @@ class Govspider(JY):
                 content_type = response.headers['Content-Type']
                 if 'text/html' in content_type:
                     rs_content = response.text
-                    content, ts_js, jsurl = self.main_rs_info(rs_content)
-                    self.execjs_data(content, ts_js, jsurl)
+                    self.iv8_env(response.text)
                 match = re.search(r'id="ancheid"\s*value="(.*?)"', response.text)
                 if match:
                     return match.group(1)
@@ -1221,11 +1323,11 @@ class Govspider(JY):
                         item['data_source'] = 'equity_pledge'
                         item['company_url'] = params[0]
                         item['company'] = params[1]
-                        logger.info(item)
-                        # if type == "data":
-                        #     self.shareholder_collection.insert_one(item)
-                        # else:
-                        #     self.shareholder_coll2.insert_one(item)
+                        if type == "data":
+                            self.shareholder_collection.insert_one(item)
+                        else:
+                            self.shareholder_coll2.insert_one(item)
+                        item.pop('_id', None)  # 防止 ObjectId 污染后续序列化
                     datalist.extend(items)
                     if page >= totalPage:
                         return datalist
@@ -1266,6 +1368,7 @@ class Govspider(JY):
                     item['company_url'] = comlist["bgurl"]
                     item['company'] = comlist["company"]
                     self.equity_collection.insert_one(item)
+                    item.pop('_id', None)  # 防止 ObjectId 污染
                 datalist.extend(items)
                 if page >= totalPage:
                     return datalist
@@ -1303,6 +1406,7 @@ class Govspider(JY):
                         item['company_url'] = comlist["xlurl"]
                         item['company'] = comlist["company"]
                         self.Intellectual_property.insert_one(item)
+                        item.pop('_id', None)  # 防止 ObjectId 污染
                     datalist.extend(items)
                     if page >= totalPage:
                         return datalist
@@ -1353,7 +1457,6 @@ class Govspider(JY):
                     url=url, method='POST', data=data,
                     timeout=(10, 15), custom_cookie=self.cookie, retry_func=None
                 )
-
             try:
                 response = self.unified_request(
                     url=url, method='POST', data=data,
@@ -1424,8 +1527,7 @@ class Govspider(JY):
                 logger.warning(f"[年报] {company_name} 年报详情为空")
                 return detailData
 
-            phone = "";
-            staff = ""
+            phone = ""; staff = ""
             try:
                 phone = self.anreport_f(code)
             except Exception as e:
@@ -1444,11 +1546,9 @@ class Govspider(JY):
 
     def _collect_shareholder_data(self, comlist):
         """【板块2】股东出资信息 — data(出资明细) + type(股东类型)"""
-        result_data = None;
-        result_type = None
+        result_data = None; result_type = None
         try:
-            gdurl = comlist.get("gdurl");
-            shaurl = comlist.get("shaurl")
+            gdurl = comlist.get("gdurl"); shaurl = comlist.get("shaurl")
             company = comlist.get("company", "unknown")
             if gdurl:
                 result_data = self.safe_call(self.equity_pledge, "data", [gdurl, company], [], 1)
@@ -1501,10 +1601,12 @@ class Govspider(JY):
         try:
             if not comlist.get("spurl"):
                 return None
+            def retry_func():
+                return self._collect_food_check(comlist)
             resp = self.unified_request(
                 url=comlist["spurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1525,10 +1627,12 @@ class Govspider(JY):
         try:
             if not comlist.get("cpjdurl"):
                 return None
+            def retry_func():
+                return self._collect_product_quality(comlist)
             resp = self.unified_request(
                 url=comlist["cpjdurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1549,10 +1653,12 @@ class Govspider(JY):
         try:
             if not comlist.get("ssjurl"):
                 return None
+            def retry_func():
+                return self._collect_random_inspection(comlist)
             resp = self.unified_request(
                 url=comlist["ssjurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1573,10 +1679,12 @@ class Govspider(JY):
         try:
             if not comlist.get("xzurl"):
                 return None
+            def retry_func():
+                return self._collect_admin_license(comlist)
             resp = self.unified_request(
                 url=comlist["xzurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1606,11 +1714,13 @@ class Govspider(JY):
         每个板块独立采集，失败不阻断其他板块。使用线程池并行加速。
         """
         company_name = info.get("name", "unknown")
-        logger.info(f"\n{'=' * 60}\n采集公司: {company_name}\n{'=' * 60}")
+        logger.info(f"\n{'='*60}\n采集公司: {company_name}\n{'='*60}")
 
         result = {"company": company_name, "detail": {}, "sections": {}}
 
         try:
+            # 第0步：确保session新鲜
+            self._ensure_session_fresh()
             # 第一步：获取公司详情页，提取基本信息 + 各板块URL
             comlist, detailData = self.vhpage(info)
             logger.info(f"[详情页] URL提取完成, 板块数={len(comlist)}")
@@ -1627,30 +1737,25 @@ class Govspider(JY):
             except Exception as e:
                 logger.error(f"[年报] 采集失败: {e}")
 
-            # 第三步：并行采集各板块数据 (8个板块并发)
-            from concurrent.futures import ThreadPoolExecutor, as_completed
+            # 第三步：串行采集各板块数据 (避免cookie竞争，稳定性优先)
+            section_collectors = [
+                ("shareholder", lambda: self._collect_shareholder_data(comlist)),
+                ("business_change", lambda: self._collect_business_change(comlist)),
+                ("intellectual_property", lambda: self._collect_intellectual_property(comlist)),
+                ("trademark", lambda: self._collect_trademark_data(comlist)),
+                ("food_check", lambda: self._collect_food_check(comlist)),
+                ("product_quality", lambda: self._collect_product_quality(comlist)),
+                ("random_inspection", lambda: self._collect_random_inspection(comlist)),
+                ("admin_license", lambda: self._collect_admin_license(comlist)),
+            ]
 
-            tasks = {
-                "shareholder": lambda: self._collect_shareholder_data(comlist),
-                "business_change": lambda: self._collect_business_change(comlist),
-                "intellectual_property": lambda: self._collect_intellectual_property(comlist),
-                "trademark": lambda: self._collect_trademark_data(comlist),
-                "food_check": lambda: self._collect_food_check(comlist),
-                "product_quality": lambda: self._collect_product_quality(comlist),
-                "random_inspection": lambda: self._collect_random_inspection(comlist),
-                "admin_license": lambda: self._collect_admin_license(comlist),
-            }
-
-            with ThreadPoolExecutor(max_workers=4) as executor:
-                futures = {executor.submit(fn): name for name, fn in tasks.items()}
-                for future in as_completed(futures):
-                    name = futures[future]
-                    try:
-                        data = future.result()
-                        result["sections"][name] = data
-                    except Exception as e:
-                        logger.error(f"[{name}] 并行采集异常: {e}")
-                        result["sections"][name] = None
+            for name, fn in section_collectors:
+                try:
+                    data = fn()
+                    result["sections"][name] = data
+                except Exception as e:
+                    logger.error(f"[{name}] 采集异常: {e}")
+                    result["sections"][name] = None
 
             # 第四步：汇总输出
             section_summary = {
@@ -1663,6 +1768,7 @@ class Govspider(JY):
         except Exception as e:
             logger.error(f"[{company_name}] 处理异常: {e}")
             return result
+
 
     def detilinfo(self, company):
         """企业信息采集主入口
@@ -1700,12 +1806,11 @@ class Govspider(JY):
                     self.append_processed_code(info.get("name", ""))
 
             # 第三步：汇总
-            logger.success(f"\n{'=' * 60}")
+            logger.success(f"\n{'='*60}")
             logger.success(f"采集完成! 共处理 {len(all_results)}/{len(datalist)} 家企业")
             for r in all_results:
                 sections = r.get("sections", {})
-                summary = {k: (f"{len(v)}条" if isinstance(v, list) else str(type(v).__name__)) for k, v in
-                           sections.items()}
+                summary = {k: (f"{len(v)}条" if isinstance(v, list) else str(type(v).__name__)) for k, v in sections.items()}
                 logger.info(f"  {r['company']}: {summary}")
             return all_results
 
@@ -1730,16 +1835,18 @@ class Govspider(JY):
         except Exception as e:
             logger.error(f"添加已处理代码失败: {e}")
 
+
     def is_processed(self, company):
         """检查公司是否已处理"""
         if not company:
             return False
         return str(company).strip() in self.processed_codes
 
+
     def close_mongo_connection(self):
         """关闭MongoDB连接"""
         try:
-            # self.mongo_client.close()
+            self.mongo_client.close()
             logger.info("MongoDB连接已关闭")
         except Exception as e:
             logger.info(f"关闭MongoDB连接失败: {e}")
@@ -1756,7 +1863,6 @@ class Govspider(JY):
             try:
                 resp = self.send()
                 try:
-                    print("登陆前cookie:", self.cookies)
                     success = self.loginuser(user, resp)
                     if success:
                         logger.success(f"账号 {user['user']} 登录完成")
@@ -1771,16 +1877,19 @@ class Govspider(JY):
             logger.info(f"main_qe pass盾异常:{e}")
             raise Exception("访问首页异常！！")
 
+
     def main(self):
         """主方法 — 处理账号登录和数据采集"""
         num = 1
         try:
-            user = {"user": "18050400868", "pwd": "Anbo123456"}
+            # user = {"user": "18050400868", "pwd": "Anbo123456"}
+            # user = {"user": "18965736502", "pwd": "HNg786346"}
+            user = {"user": "17359191389", "pwd": "ASl57456"}
             if not user:
                 logger.info("无法获取可用账号，程序退出")
                 return
             self.next_login(user)
-            company = "914108006659708962"
+            company = "阿里巴巴"
             logger.info(f">>> 正在处理公司: 【{company}】 <<<")
             try:
                 self.detilinfo(company)

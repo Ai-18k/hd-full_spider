@@ -24,6 +24,7 @@ from Crypto.Util.Padding import pad, unpad
 import hashlib
 import iv8
 import urllib.parse
+import threading
 
 
 def proxy_list():
@@ -91,13 +92,14 @@ requests = requests.Session(impersonate=random.choice(["edge99",
     "safari18_4"
 ]))
 functo_code = None
-rs_content = None
 
 class CT:
     """瑞数CT WAF 穿透层 — 处理 521→521→412 以及CT cookie生成"""
 
     def __init__(self):
         self.cookies = {}
+        self._cookies_lock = threading.Lock()
+        self._last_rs_content = None
         self.url = "https://shiming.gsxt.gov.cn/socialuser-use-rllogin.html"
         self.waf_url = "https://shiming.gsxt.gov.cn/ctct/nwaf/waf.log"
         self.proxies = proxy_list()
@@ -384,7 +386,7 @@ class Hg(CT):
 
     def iv8_env(self, rs_response):
         """用 iv8 执行RS6页面中的 m.js，获取 RS6 会话 cookie
-        
+
         Returns:
             tuple: (_publicKey, fiKxeghI)
               - _publicKey: RSA 公钥（用于加密登录凭据）
@@ -634,7 +636,6 @@ class Govspider(JY):
         self.trademark_info = self.mongo_db["trademark_info"]
         self.login_url="https://shiming.gsxt.gov.cn/socialuser-use-login-request.html"
 
-    @retry(stop_max_attempt_number=5, wait_fixed=1000)
     def unified_request(self, url, method, params=None, data=None, json_data=None,
                         timeout=(10, 20), custom_headers=None, custom_cookie=None, retry_func=None, **kwargs):
         """
@@ -656,7 +657,6 @@ class Govspider(JY):
             response: requests.Response对象
         """
         # 合并自定义请求头
-        global rs_content
         # headers = self.headers.copy()
         # if custom_headers:
         #     headers.update(custom_headers)
@@ -707,10 +707,10 @@ class Govspider(JY):
                 except:
                     pass
                 try:
-                    # rs_content = response.text
-                    # content, ts_js, jsurl = self.main_rs_info(response.text)
-                    # self.execjs_data(content,ts_js,jsurl)
-                    self.iv8_env(response.text)
+                    rs_content = response.text
+                    if "努力加载中" in rs_content:
+                        rs_content = self.resp_jsl(rs_content)
+                    self.iv8_env(rs_content)
                 except Exception as e:
                     logger.info(f"处理412状态码时出错: {e}")
                 if retry_func:
@@ -729,8 +729,9 @@ class Govspider(JY):
                     logger.info(f"加速乐第一次请求的状态码:{response}")
                     self.url = url
                     data = self.jsl(response.text)
-                    rs_content = self.resp_jsl(data)
-                    self.iv8_env(rs_content)
+                    ct_content = self.resp_jsl(data)
+                    self._last_rs_content = self.first_req(ct_content)
+                    self.iv8_env(self._last_rs_content)
                 except Exception as e:
                     logger.info(f"处理521状态码时出错: {e}")
                 if retry_func:
@@ -754,19 +755,11 @@ class Govspider(JY):
             elif response.status_code == 400:
                 with open("Node_control/unified_request_400.html", "w", encoding="utf-8") as f:
                     f.write(response.text)
-                logger.info(f"unified_request请求失败，状态码:{response},失败链接:{url}")
-                try:
-                    logger.info(
-                        f"代理400信息：{requests.get('https://myip.ipip.net', proxies=self.proxies, timeout=(5, 10)).text}")
-                except:
-                    pass
-                # 获取公钥和验证码
-                data = self.jsl(response.text)
-                self.resp_jsl(data)
+                logger.warning(f"unified_request 400错误，链接:{url}")
                 if retry_func:
                     return retry_func()
                 else:
-                    raise ConnectionError("unified_request的400状态码，需要重试")
+                    raise ConnectionError(f"400 Bad Request: {url}")
             else:
                 with open(f"Node_control/unified_request_{response.status_code}.html", "w", encoding="utf-8") as f:
                     f.write(response.text)
@@ -782,9 +775,40 @@ class Govspider(JY):
 
 
     def get_fresh_cookie(self):
-        try: self.iv8_env(rs_content)
+        try: self.iv8_env(self._last_rs_content)
         except Exception as e: logger.error(f"get_fresh_cookie: {e}")
         return self.cookies.copy() if isinstance(self.cookies, dict) else {}
+
+    def _ensure_session_fresh(self):
+        """轻量级探测：GET首页检查cookie是否新鲜，遇521/412自动恢复"""
+        for attempt in range(3):
+            try:
+                resp = requests.get(
+                    "https://shiming.gsxt.gov.cn/index.html",
+                    headers=self.headers, cookies=self.cookies,
+                    proxies=self.proxies, timeout=(10, 15), verify=False
+                )
+                if resp.status_code == 200:
+                    safe_update(self.cookies, resp.cookies.get_dict())
+                    return True
+                elif resp.status_code in (521, 412):
+                    logger.warning(f"[Session] 收到{resp.status_code}, 刷新WAF...")
+                    if resp.status_code == 521:
+                        safe_update(self.cookies, resp.cookies.get_dict())
+                        data = self.jsl(resp.text)
+                        ct_content = self.resp_jsl(data)
+                        self._last_rs_content = self.first_req(ct_content)
+                    else:  # 412
+                        safe_update(self.cookies, resp.cookies.get_dict())
+                        self._last_rs_content = resp.text
+                    self.iv8_env(self._last_rs_content)
+                else:
+                    logger.warning(f"[Session] 探测返回{resp.status_code}")
+            except Exception as e:
+                logger.warning(f"[Session] 探测异常(attempt {attempt+1}/3): {e}")
+                time.sleep(2)
+        logger.error("[Session] 刷新失败!")
+        return False
 
 
     def loginuser(self, user, params):
@@ -819,8 +843,7 @@ class Govspider(JY):
                                       proxies=self.proxies, timeout=(10, 20), verify=False)
                     safe_update(self.cookies, ir.cookies.get_dict())
                     if ir.status_code == 200:
-                        global rs_content
-                        rs_content=ir.text
+                        self._last_rs_content = ir.text
                         self.iv8_env(ir.text)
                         logger.success("首页cookie已更新")
                     return True
@@ -851,7 +874,7 @@ class Govspider(JY):
 
 
     def searchcompany(self, company, page):
-        while True:
+        for _ in range(5):
             try:
                 p = self.send()
                 url = "https://shiming.gsxt.gov.cn/corp-query-search-1.html"
@@ -883,11 +906,9 @@ class Govspider(JY):
                 def rt():
                     p2 = self.send()
                     for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]: data[k] = p2[k]
-                    # return self.unified_request(url=url, method="POST", data=data, timeout=(5, 15),
-                    #                             custom_cookie=self.cookie, retry_func=None)
-                    return self.unified_request(url=url, method="POST", data=data, timeout=(5, 15),retry_func=None)
-                # r = self.unified_request(url=url, method="POST", data=data, timeout=(5, 15),custom_cookie=self.cookie, retry_func=rt)
-                r = self.unified_request(url=url, method="POST",custom_headers=headers,data=data, timeout=(5, 15),retry_func=rt)
+                    return self.unified_request(url=url, method="POST", data=data, timeout=(5, 15),custom_headers=headers,
+                                                custom_cookie=self.cookie, retry_func=None)
+                r = self.unified_request(url=url, method="POST", data=data,custom_headers=headers, timeout=(5, 15),custom_cookie=self.cookie, retry_func=rt)
                 if r.status_code == 200:
                     if "NGIDERRORCODE" in r.text: raise ConnectionError("账号异常")
                     html = etree.HTML(r.text)
@@ -907,7 +928,7 @@ class Govspider(JY):
                     return None
             except Exception as e:
                 print(e)
-
+        raise ConnectionError(f"searchcompany搜索公司异常!!")
 
     # ================================================================
     # 数据解析工具
@@ -943,7 +964,7 @@ class Govspider(JY):
     @retry(wait_fixed=1000)
     def vhpage(self, info):
         """获取公司详情页，提取基本工商信息 + 各数据板块API端点
-        
+
         提取的板块URL(10个):
           bgurl   = alterInfoUrl        → 工商变更
           shaurl  = shareholderUrl      → 股东信息
@@ -956,7 +977,7 @@ class Govspider(JY):
           cpjdurl = eproquacheckUrl     → 产品质量监督抽查
           ssjurl  = getDrRaninsResUrl   → 双随机抽查
           xzurl   = nLicUrl             → 行政许可
-        
+
         Returns:
             tuple: (comlist URL字典, detailData 基本信息字典)
         """
@@ -1273,7 +1294,7 @@ class Govspider(JY):
 
     def equity_pledge(self, type, params, datalist, page):
         """股东出资数据提取并保存到MongoDB
-        
+
         Args:
             type: "data"=出资明细 / "type"=股东类型
             params: [url, company_name]
@@ -1306,6 +1327,7 @@ class Govspider(JY):
                             self.shareholder_collection.insert_one(item)
                         else:
                             self.shareholder_coll2.insert_one(item)
+                        item.pop('_id', None)  # 防止 ObjectId 污染后续序列化
                     datalist.extend(items)
                     if page >= totalPage:
                         return datalist
@@ -1346,6 +1368,7 @@ class Govspider(JY):
                     item['company_url'] = comlist["bgurl"]
                     item['company'] = comlist["company"]
                     self.equity_collection.insert_one(item)
+                    item.pop('_id', None)  # 防止 ObjectId 污染
                 datalist.extend(items)
                 if page >= totalPage:
                     return datalist
@@ -1383,6 +1406,7 @@ class Govspider(JY):
                         item['company_url'] = comlist["xlurl"]
                         item['company'] = comlist["company"]
                         self.Intellectual_property.insert_one(item)
+                        item.pop('_id', None)  # 防止 ObjectId 污染
                     datalist.extend(items)
                     if page >= totalPage:
                         return datalist
@@ -1488,7 +1512,7 @@ class Govspider(JY):
 
     def _get_annual_report_info(self, comlist, detailData, company_name):
         """【板块1】年报信息 — 提取企业联系电话 + 参保人数(企业规模)
-        
+
         数据流: anCheYearInfo -> get_anCheId -> anreport -> anreport_f/s
         """
         try:
@@ -1497,12 +1521,12 @@ class Govspider(JY):
             if not aninfo:
                 logger.warning(f"[年报] {company_name} 无年报信息")
                 return detailData
-            
+
             code = self.anreport(aninfo, comlist.get("banurl"))
             if not code:
                 logger.warning(f"[年报] {company_name} 年报详情为空")
                 return detailData
-            
+
             phone = ""; staff = ""
             try:
                 phone = self.anreport_f(code)
@@ -1512,7 +1536,7 @@ class Govspider(JY):
                 staff = self.anreport_s(code)
             except Exception as e:
                 logger.error(f"[年报] 规模获取失败: {e}")
-            
+
             logger.info(f"[年报] 电话={phone}, 参保人数={staff}")
             detailData.update({"legalTelephone": phone, "staffSize": staff})
             return detailData
@@ -1577,10 +1601,12 @@ class Govspider(JY):
         try:
             if not comlist.get("spurl"):
                 return None
+            def retry_func():
+                return self._collect_food_check(comlist)
             resp = self.unified_request(
                 url=comlist["spurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1601,10 +1627,12 @@ class Govspider(JY):
         try:
             if not comlist.get("cpjdurl"):
                 return None
+            def retry_func():
+                return self._collect_product_quality(comlist)
             resp = self.unified_request(
                 url=comlist["cpjdurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1625,10 +1653,12 @@ class Govspider(JY):
         try:
             if not comlist.get("ssjurl"):
                 return None
+            def retry_func():
+                return self._collect_random_inspection(comlist)
             resp = self.unified_request(
                 url=comlist["ssjurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1649,10 +1679,12 @@ class Govspider(JY):
         try:
             if not comlist.get("xzurl"):
                 return None
+            def retry_func():
+                return self._collect_admin_license(comlist)
             resp = self.unified_request(
                 url=comlist["xzurl"], method='POST',
                 data={"draw": 1, "start": 0, "length": "10"},
-                timeout=(10, 15), retry_func=None
+                timeout=(10, 15), retry_func=retry_func
             )
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
@@ -1674,24 +1706,26 @@ class Govspider(JY):
 
     def _process_single_company(self, info):
         """处理单个公司的全板块数据采集
-        
+
         板块清单(9个):
           1.年报(电话+规模)  2.股东出资  3.工商变更  4.知识产权
           5.商标  6.食品检测  7.产品质量  8.双随机抽查  9.行政许可
-        
+
         每个板块独立采集，失败不阻断其他板块。使用线程池并行加速。
         """
         company_name = info.get("name", "unknown")
         logger.info(f"\n{'='*60}\n采集公司: {company_name}\n{'='*60}")
-        
+
         result = {"company": company_name, "detail": {}, "sections": {}}
-        
+
         try:
+            # 第0步：确保session新鲜
+            self._ensure_session_fresh()
             # 第一步：获取公司详情页，提取基本信息 + 各板块URL
             comlist, detailData = self.vhpage(info)
             logger.info(f"[详情页] URL提取完成, 板块数={len(comlist)}")
             result["detail"] = detailData
-            
+
             # 第二步：年报 (电话+规模) — 必须先获取，为detailData补充字段
             try:
                 detailData = self._get_annual_report_info(comlist, detailData, company_name)
@@ -1702,32 +1736,27 @@ class Govspider(JY):
                 }
             except Exception as e:
                 logger.error(f"[年报] 采集失败: {e}")
-            
-            # 第三步：并行采集各板块数据 (8个板块并发)
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-            
-            tasks = {
-                "shareholder": lambda: self._collect_shareholder_data(comlist),
-                "business_change": lambda: self._collect_business_change(comlist),
-                "intellectual_property": lambda: self._collect_intellectual_property(comlist),
-                "trademark": lambda: self._collect_trademark_data(comlist),
-                "food_check": lambda: self._collect_food_check(comlist),
-                "product_quality": lambda: self._collect_product_quality(comlist),
-                "random_inspection": lambda: self._collect_random_inspection(comlist),
-                "admin_license": lambda: self._collect_admin_license(comlist),
-            }
-            
-            with ThreadPoolExecutor(max_workers=4) as executor:
-                futures = {executor.submit(fn): name for name, fn in tasks.items()}
-                for future in as_completed(futures):
-                    name = futures[future]
-                    try:
-                        data = future.result()
-                        result["sections"][name] = data
-                    except Exception as e:
-                        logger.error(f"[{name}] 并行采集异常: {e}")
-                        result["sections"][name] = None
-            
+
+            # 第三步：串行采集各板块数据 (避免cookie竞争，稳定性优先)
+            section_collectors = [
+                ("shareholder", lambda: self._collect_shareholder_data(comlist)),
+                ("business_change", lambda: self._collect_business_change(comlist)),
+                ("intellectual_property", lambda: self._collect_intellectual_property(comlist)),
+                ("trademark", lambda: self._collect_trademark_data(comlist)),
+                ("food_check", lambda: self._collect_food_check(comlist)),
+                ("product_quality", lambda: self._collect_product_quality(comlist)),
+                ("random_inspection", lambda: self._collect_random_inspection(comlist)),
+                ("admin_license", lambda: self._collect_admin_license(comlist)),
+            ]
+
+            for name, fn in section_collectors:
+                try:
+                    data = fn()
+                    result["sections"][name] = data
+                except Exception as e:
+                    logger.error(f"[{name}] 采集异常: {e}")
+                    result["sections"][name] = None
+
             # 第四步：汇总输出
             section_summary = {
                 k: (f"{len(v)}条" if isinstance(v, list) else bool(v))
@@ -1735,14 +1764,15 @@ class Govspider(JY):
             }
             logger.success(f"[{company_name}] 采集完成: {section_summary}")
             return result
-            
+
         except Exception as e:
             logger.error(f"[{company_name}] 处理异常: {e}")
             return result
 
+
     def detilinfo(self, company):
         """企业信息采集主入口
-        
+
         流程:
           1. 搜索公司 -> 获取公司列表
           2. 遍历每个公司 -> 采集全板块数据(9个板块)
@@ -1751,7 +1781,7 @@ class Govspider(JY):
         logger.info("*" * 80)
         logger.info(f"开始采集: {company}")
         logger.info("*" * 80)
-        
+
         try:
             # 第一步：搜索公司
             logger.info("[搜索] 正在搜索公司...")
@@ -1762,7 +1792,7 @@ class Govspider(JY):
                     f.write(f"{datetime.now().isoformat()}\t{company}\n")
                 return None
             logger.info(f"[搜索] 找到 {len(datalist)} 家企业")
-            
+
             # 第二步：逐个采集
             all_results = []
             for idx, info in enumerate(datalist, 1):
@@ -1774,7 +1804,7 @@ class Govspider(JY):
                 if company_result:
                     all_results.append(company_result)
                     self.append_processed_code(info.get("name", ""))
-            
+
             # 第三步：汇总
             logger.success(f"\n{'='*60}")
             logger.success(f"采集完成! 共处理 {len(all_results)}/{len(datalist)} 家企业")
@@ -1783,7 +1813,7 @@ class Govspider(JY):
                 summary = {k: (f"{len(v)}条" if isinstance(v, list) else str(type(v).__name__)) for k, v in sections.items()}
                 logger.info(f"  {r['company']}: {summary}")
             return all_results
-            
+
         except Exception as e:
             logger.error(f"[主流程] {company} 采集异常: {e}")
             import traceback
@@ -1811,6 +1841,7 @@ class Govspider(JY):
         if not company:
             return False
         return str(company).strip() in self.processed_codes
+
 
     def close_mongo_connection(self):
         """关闭MongoDB连接"""
@@ -1845,6 +1876,7 @@ class Govspider(JY):
         except Exception as e:
             logger.info(f"main_qe pass盾异常:{e}")
             raise Exception("访问首页异常！！")
+
 
     def main(self):
         """主方法 — 处理账号登录和数据采集"""
