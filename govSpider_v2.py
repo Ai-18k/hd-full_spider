@@ -735,8 +735,12 @@ class Govspider(JY):
                 try:
                     safe_update(self.cookies, response.cookies.get_dict())
                     self.iv8_env(response.text)
-                except Exception as e:
-                    logger.info(f"处理412状态码时出错: {e}")
+                except Exception:
+                    logger.info("iv8_env失败，尝试full session恢复...")
+                    try:
+                        self._ensure_session_fresh()
+                    except Exception as e2:
+                        logger.warning(f"Session恢复也失败: {e2}")
                 if retry_func:
                     return retry_func()
                 else:
@@ -1270,40 +1274,19 @@ class Govspider(JY):
                         return None
                 bgurl = extract_url("alterInfoUrl")        # 工商变更
                 shaurl = extract_url("shareholderUrl")      # 股东信息
-                spurl = extract_url("getFoodChkInfoUrl")    # 食品检测
+                # spurl = extract_url("getFoodChkInfoUrl")    # 食品检测
                 gdurl = extract_url("insInvinfoUrl")        # 股东出资
                 xlurl = extract_url("IntellectualInfoUrl")  # 知识产权
                 nburl = extract_url("anCheYearInfo")        # 年报年份
                 banurl = extract_url("annRepDetailUrl")     # 年报详情
                 sburl = extract_url("allTrademarkUrl")      # 商标
-                cpjdurl = extract_url("eproquacheckUrl")    # 产品质量
-                ssjurl = extract_url("getDrRaninsResUrl")   # 双随机抽查
+                # cpjdurl = extract_url("eproquacheckUrl")    # 产品质量
+                # ssjurl = extract_url("getDrRaninsResUrl")   # 双随机抽查
                 xzurl = extract_url("nLicUrl")              # 行政许可
 
-                # --- 提取基本工商信息 ---
-                def clean_key(key):
-                    key = re.sub(r'[\s\xa0\u2002\u2003\u2009\u00a0&emsp;&thinsp;]+', '', key)
-                    key = key.replace("&nbsp;", "").replace(" ", "")
-                    key = key.replace("：", "").replace(":", "")
-                    return key
-
-                field_map = {
-                    "统一社会信用代码": "tyxydm",
-                    "企业名称": "companyName", "名称": "companyName",
-                    "注册号": "gszch",
-                    "法定代表人": "legalName", "负责人": "legalName",
-                    "经营者": "legalName", "投资人": "legalName",
-                    "执行事务合伙人": "legalName",
-                    "类型": "companyType",
-                    "成立日期": "dateOfEstablishment", "注册日期": "dateOfEstablishment",
-                    "注册资本": "registeredCapital",
-                    "登记机关": "registrationAuthority",
-                    "登记状态": "registrationStatus",
-                    "住所": "registeredAddress", "经营场所": "registeredAddress",
-                    "经营范围": "businessScope",
-                    "营业期限": "yyqx",
-                }
-
+                logger.info(f"工商变更:{bgurl}\n股东信息:{shaurl}\n股东出资:{gdurl}\n知识产权:{xlurl}\n"
+                            f"年报年份:{nburl}\n年报详情:{banurl}\n商标:{sburl}\n行政许可:{xzurl}\n")
+                # --- 提取基本工商信息 （页面结构: div.yyzz-all > div.top + table.yyzz-table）---
                 result = {
                     "companyName": None, "companyType": None,
                     "registeredAddress": None, "legalName": None,
@@ -1313,58 +1296,83 @@ class Govspider(JY):
                     "gszch": "", "registeredCapital": ""
                 }
 
-                dls = soup.find_all("dl")
-                for dl in dls:
-                    dt = dl.find("dt")
-                    dd = dl.find("dd")
-                    if not dt or not dd:
-                        continue
-                    raw_key = dt.get_text(strip=True)
-                    key = clean_key(raw_key)
-                    value = dd.get_text(strip=True)
-                    if not value and dd.has_attr("title"):
-                        value = dd["title"].strip()
-                    for k, v in field_map.items():
-                        if k in key:
-                            if v == "dateOfEstablishment":
-                                date_match = re.match(r"(\d{4})年(\d{2})月(\d{2})日", value)
-                                if date_match:
-                                    result[v] = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
-                                else:
-                                    result[v] = value
-                            else:
-                                result[v] = value
-                            break
+                # 字段映射（clean后的key → result key）
+                field_map = {
+                    "统一社会信用代码": "tyxydm",
+                    "名称": "companyName", "企业名称": "companyName",
+                    "注册号": "gszch",
+                    "类型": "companyType",
+                    "住所": "registeredAddress", "经营场所": "registeredAddress",
+                    "法定代表人": "legalName", "负责人": "legalName",
+                    "经营者": "legalName", "投资人": "legalName",
+                    "执行事务合伙人": "legalName",
+                    "注册资本": "registeredCapital",
+                    "成立日期": "dateOfEstablishment", "注册日期": "dateOfEstablishment",
+                    "登记机关": "registrationAuthority",
+                    "登记状态": "registrationStatus",
+                    "经营范围": "businessScope",
+                    "营业期限": "yyqx",
+                }
 
-                # 营业期限
-                yyzz_all_div = soup.find("div", class_="yyzz-all")
-                if yyzz_all_div:
-                    table = yyzz_all_div.find("table", class_="yyzz-table")
+                def clean_key(text):
+                    """清洗字段名中的特殊空白字符（BeautifulSoup已将&emsp;/&thinsp;/&nbsp;解码为Unicode）"""
+                    text = re.sub(r'[\s\u00a0\u2002\u2003\u2009]+', '', text)
+                    text = text.replace("：", "").replace(":", "").strip()
+                    return text
+
+                yyzz_div = soup.find("div", class_="yyzz-all")
+                if yyzz_div:
+                    # 1. 从 div.top 提取统一社会信用代码
+                    top_div = yyzz_div.find("div", class_="top")
+                    if top_div:
+                        top_b = top_div.find("b")
+                        if top_b:
+                            key_clean = clean_key(top_b.get_text())
+                            # 值在 <b> 后面的文本节点
+                            val_text = top_div.get_text().replace(top_b.get_text(), "").strip()
+                            if "统一社会信用代码" in key_clean and val_text:
+                                result["tyxydm"] = val_text
+
+                    # 2. 从 table.yyzz-table 提取所有字段
+                    table = yyzz_div.find("table", class_="yyzz-table")
                     if table:
-                        trs = table.find_all("tr")
-                        for tr in trs:
+                        for tr in table.find_all("tr"):
                             tds = tr.find_all("td")
                             if len(tds) >= 2:
-                                key_text = tds[0].get_text(strip=True).replace('\xa0', '').replace('\u2003', '').replace('\u2002', '').replace('\u2009', '')
-                                if "营业期限" in key_text or "合伙期限" in key_text:
-                                    result["yyqx"] = tds[1].get_text(strip=True)
-                                    break
-                if result["yyqx"] == "至  长期":
-                    result["yyqx"] = result['dateOfEstablishment'] + result["yyqx"]
+                                key_text = clean_key(tds[0].get_text())
+                                val_text = tds[1].get_text(strip=True)
+                                if not key_text or not val_text:
+                                    continue
+                                matched = False
+                                for fk, fv in field_map.items():
+                                    if fk in key_text:
+                                        if fv == "dateOfEstablishment":
+                                            dm = re.match(r"(\d{4})年(\d{2})月(\d{2})日", val_text)
+                                            result[fv] = f"{dm.group(1)}-{dm.group(2)}-{dm.group(3)}" if dm else val_text
+                                        else:
+                                            result[fv] = val_text
+                                        matched = True
+                                        break
+                                if not matched:
+                                    logger.debug(f"[vhpage] 未匹配字段: key='{key_text}' val='{val_text[:50]}'")
+
+                # 3. 营业期限后处理
+                if result.get("yyqx") and "至  长期" in str(result["yyqx"]):
+                    result["yyqx"] = (result.get("dateOfEstablishment") or "") + result["yyqx"]
 
                 # 构建返回
                 comlist = {
                     "company": info["name"],
                     "bgurl": bgurl,
                     "shaurl": shaurl,
-                    "spurl": spurl,
+                    # "spurl": spurl,
                     "gdurl": gdurl,
                     "xlurl": xlurl,
                     "nburl": nburl,
                     "banurl": banurl,
                     "sburl": sburl,
-                    "cpjdurl": cpjdurl,
-                    "ssjurl": ssjurl,
+                    # "cpjdurl": cpjdurl,
+                    # "ssjurl": ssjurl,
                     "xzurl": xzurl
                 }
                 return comlist, result
@@ -1624,6 +1632,7 @@ class Govspider(JY):
                     item['data_source'] = 'business_change'
                     item['company_url'] = comlist["bgurl"]
                     item['company'] = comlist["company"]
+                    logger.info(f"【*】工商变更：{item}")
                     self.equity_collection.insert_one(item)
                     item.pop('_id', None)  # 防止 ObjectId 污染
                 datalist.extend(items)
@@ -1659,6 +1668,7 @@ class Govspider(JY):
                         item['data_source'] = 'Intellectual_property'
                         item['company_url'] = comlist["xlurl"]
                         item['company'] = comlist["company"]
+                        logger.info(f"【*】知识产权：{item}")
                         self.Intellectual_property.insert_one(item)
                         item.pop('_id', None)  # 防止 ObjectId 污染
                     datalist.extend(items)
@@ -1739,6 +1749,7 @@ class Govspider(JY):
         logger.info(f"最终数据接口url:{trade_mark_url}")
         data = self.Trademark_send(trade_mark_url, page)
         if data:
+            logger.info(f"【*】商标：{data}")
             self.trademark_info.insert_many(data)
             logger.info(f"最终商标数据:{data}")
             return data
@@ -1972,36 +1983,31 @@ class Govspider(JY):
         company_name = info.get("name", "unknown")
         logger.info(f"\n{'='*60}\n采集公司: {company_name}\n{'='*60}")
 
-        result = {"company": company_name, "detail": {}, "sections": {}}
-
         try:
             # 第0步：确保session新鲜
             self._ensure_session_fresh()
             # 第一步：获取公司详情页，提取基本信息 + 各板块URL
             comlist, detailData = self.vhpage(info)
             logger.info(f"[详情页] URL提取完成, 板块数={len(comlist)}")
-            result["detail"] = detailData
-
+            result = {"company": company_name, "detail": {}, "sections": {}}
             # 第二步：年报 (电话+规模) — 必须先获取，为detailData补充字段
             try:
-                detailData = self._get_annual_report_info(comlist, detailData, company_name)
-                result["detail"] = detailData
-                result["sections"]["annual_report"] = {
-                    "phone": detailData.get("legalTelephone", ""),
-                    "staff_size": detailData.get("staffSize", "")
-                }
+                iphone = self._get_annual_report_info(comlist, detailData, company_name)
+                detailData["staff_size"] = iphone .get("staffSize", "")
+                detailData["legalTelephone"]= iphone .get("legalTelephone", "")
             except Exception as e:
                 logger.error(f"[年报] 采集失败: {e}")
-
+            result["detail"] = detailData
+            logger.info(f"【*】工商数据结果:{detailData}")
             # 第三步：串行采集各板块数据 (避免cookie竞争，稳定性优先)
             section_collectors = [
                 ("shareholder", lambda: self._collect_shareholder_data(comlist)),
                 ("business_change", lambda: self._collect_business_change(comlist)),
                 ("intellectual_property", lambda: self._collect_intellectual_property(comlist)),
                 ("trademark", lambda: self._collect_trademark_data(comlist)),
-                ("food_check", lambda: self._collect_food_check(comlist)),
-                ("product_quality", lambda: self._collect_product_quality(comlist)),
-                ("random_inspection", lambda: self._collect_random_inspection(comlist)),
+                # ("food_check", lambda: self._collect_food_check(comlist)),
+                # ("product_quality", lambda: self._collect_product_quality(comlist)),
+                # ("random_inspection", lambda: self._collect_random_inspection(comlist)),
                 ("admin_license", lambda: self._collect_admin_license(comlist)),
             ]
 
@@ -2218,7 +2224,10 @@ class Govspider(JY):
         """
         # 默认账号
         if user is None:
-            user = {"user": "17359191389", "pwd": "ASl57456"}
+            # user = {"user": "17359191389", "pwd": "ASl57456"}
+            # user = {"user": "19225906427", "pwd": "hjS564789"}
+            # user = {"user": "18965736502", "pwd": "HNg786346"}
+            user = {"user": "18060829306", "pwd": "Kof989345"}
 
         # 加载已处理记录（断点续采）
         self._load_processed_from_mongo()
@@ -2250,7 +2259,8 @@ class Govspider(JY):
                 continue
 
             # 去重检查
-            if self.is_processed(company):
+            # if self.is_processed(company):
+            if False:
                 logger.info(f"[{idx}/{total}] {company} — 已处理，跳过")
                 skipped_count += 1
                 continue
