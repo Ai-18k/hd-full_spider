@@ -488,7 +488,6 @@ class Hg(CT):
 
                 if ct_content:
                     rs_content = self.first_req(ct_content)
-                    self._last_rs_content = rs_content  # 保存用于后续 cookie 刷新
                     self.iv8_env(rs_content)
                 # 携带完整 cookie 重新请求页面，拿到带 XHR hook 的真实页面 JS。
                 _publicKey, fiKxeghI = self.get_publicKey()
@@ -605,6 +604,7 @@ class JY(Hg):
         return jsObj.call("get_w", arg, self.get_random_str()), data
 
     def send(self):
+        logger.info("[验证码] 开始获取极验4验证码...")
         for attempt in range(10):
             try:
                 h = {"Accept": "*/*", "Accept-Language": "zh-CN,zh;q=0.9", "Referer": "https://shiming.gsxt.gov.cn/",
@@ -741,18 +741,14 @@ class Govspider(JY):
                     pass
                 try:
                     logger.info(f"加速乐第一次请求的状态码:{response}")
-                    # 用登录页 URL 做 WAF 恢复（不能用业务 URL，jsl/resp_jsl 依赖 self.url）
-                    saved_url = self.url
-                    self.url = "https://shiming.gsxt.gov.cn/socialuser-use-rllogin.html"
+                    self.url = url
                     data = self.jsl(response.text)
                     if data is None:
                         logger.error("jsl返回None，无法继续521流程")
-                        self.url = saved_url
                         raise RuntimeError("jsl解析失败")
                     ct_content = self.resp_jsl(data)
                     self._last_rs_content = self.first_req(ct_content)
                     self.iv8_env(self._last_rs_content)
-                    self.url = saved_url  # 恢复原 URL
                 except Exception as e:
                     logger.info(f"处理521状态码时出错: {e}")
                 if retry_func:
@@ -796,13 +792,8 @@ class Govspider(JY):
 
 
     def get_fresh_cookie(self):
-        if self._last_rs_content is None:
-            logger.warning("get_fresh_cookie: _last_rs_content is None, 跳过iv8刷新")
-        else:
-            try:
-                self.iv8_env(self._last_rs_content)
-            except Exception as e:
-                logger.error(f"get_fresh_cookie: {e}")
+        try: self.iv8_env(self._last_rs_content)
+        except Exception as e: logger.error(f"get_fresh_cookie: {e}")
         return self.cookies.copy() if isinstance(self.cookies, dict) else {}
 
     def _ensure_session_fresh(self):
@@ -910,17 +901,10 @@ class Govspider(JY):
         优先级：meta > JS变量 > input hidden
         """
         sources = []
-        # 用文档请求头获取 index.html（不能用 XHR 头，会被 405）
-        page_headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "User-Agent": self.headers.get("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36"),
-        }
         if html is None:
             try:
                 resp = requests.get("https://shiming.gsxt.gov.cn/index.html",
-                                    headers=page_headers, cookies=self.cookies,
+                                    headers=self.headers, cookies=self.cookies,
                                     proxies=self.proxies, timeout=(10, 15), verify=False)
                 if resp.status_code == 200:
                     safe_update(self.cookies, resp.cookies.get_dict())
@@ -977,28 +961,7 @@ class Govspider(JY):
         logger.error("[Token] 3次提取均失败，使用空字符串（可能不需要token）")
         return ""
 
-    def _search_preflight(self):
-        """浏览器搜索前的前置验证请求
-
-        浏览器在搜索前会同步请求两个端点：
-        1. /corp-query-custom-geetest-image.gif?v=TIMESTAMP — 设置 browser_version
-        2. /corp-query-geetest-validate-input.html?token=TOKEN — 验证 token
-        RS6 XHR hook 自动给请求加 fiKxeghI 参数。
-        """
-        import time as _time
-        try:
-            ts = str(int(_time.time() * 1000) % 1000)  # 分钟+秒的简化版
-            fi = self.fiKxeghI or self.cookies.get("dUs8TeLcaHgjP", "")
-            img_url = f"https://shiming.gsxt.gov.cn/corp-query-custom-geetest-image.gif?v={ts}"
-            if fi:
-                img_url += f"&fiKxeghI={fi}"
-            resp = requests.get(img_url, headers=self.headers, cookies=self.cookies,
-                                proxies=self.proxies, timeout=10)
-            logger.info(f"[预检] image.gif: {resp.status_code}")
-        except Exception as e:
-            logger.warning(f"[预检] image.gif失败: {e}")
-
-    def _search_paginate(self, company, params, data_template, page=1, max_pages=50):
+    def _search_paginate(self, company, params, headers, data_template, page=1, max_pages=50):
         """统一的搜索分页方法
 
         对搜索结果进行翻页采集，返回所有公司的列表。
@@ -1007,6 +970,7 @@ class Govspider(JY):
         Args:
             company: 搜索关键词
             params: 极验验证码参数 (含 lot_number, captcha_output 等)
+            headers: 请求头
             data_template: POST数据模板(含 token, searchword 等)
             page: 起始页码
             max_pages: 最大翻页数(安全上限)
@@ -1024,12 +988,12 @@ class Govspider(JY):
             # 更新极验参数（复用首次验证结果）
             for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
                 data[k] = params.get(k, "")
-            rt = lambda pg=pg: self._search_paginate_retry(
-                company, params, data_template, pg)
+
+            rt = lambda pg = pg:self._search_paginate_retry(company, params, headers, data_template, pg)
 
             r = self.unified_request(
                 url=url, method="POST", data=data,
-                timeout=(10, 20), custom_cookie=self.cookie,
+                custom_headers=headers, timeout=(10, 20),
                 retry_func=rt
             )
 
@@ -1089,8 +1053,8 @@ class Govspider(JY):
         logger.info(f"[搜索] {company} 完成: 共{len(all_data)}条, {pg - page + 1}页")
         return all_data
 
-    def _search_paginate_retry(self, company, params, data_template, page):
-        """搜索翻页的重试函数（刷新验证码+RS6 cookie后重试）"""
+    def _search_paginate_retry(self, company, params, headers, data_template, page):
+        """搜索翻页的重试函数（刷新验证码后重试）"""
         try:
             p2 = self.send()
             for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
@@ -1103,8 +1067,7 @@ class Govspider(JY):
             data[k] = params.get(k, "")
         return self.unified_request(
             url="https://shiming.gsxt.gov.cn/corp-query-search-1.html",
-            method="POST", data=data,
-            custom_cookie=self.cookie,
+            method="POST", data=data, custom_headers=headers,
             timeout=(10, 20), retry_func=None
         )
 
@@ -1113,7 +1076,6 @@ class Govspider(JY):
         """搜索公司 — 自动翻页获取全量结果
 
         流程: 提取token → 获取极验验证码 → POST搜索 → 自动翻页
-        使用 Govspider 默认 XHR headers + 每次刷新 RS6 cookie
         """
         max_retries = 3
         for attempt in range(max_retries):
@@ -1131,12 +1093,30 @@ class Govspider(JY):
                 p = self.send()
                 logger.info(f"[搜索] 验证码获取成功")
 
-                # Step 2.5: 浏览器前置验证请求（corp-query-custom-geetest-image.gif）
-                self._search_preflight()
+                # Step 3: 首次搜索
+                url = "https://shiming.gsxt.gov.cn/corp-query-search-1.html"
+                headers = {
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Language": "zh-CN,zh;q=0.9",
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Origin": "https://shiming.gsxt.gov.cn",
+                    "Pragma": "no-cache",
+                    "Referer": "https://shiming.gsxt.gov.cn/index.html",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-User": "?1",
+                    "Upgrade-Insecure-Requests": "1",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+                    "sec-ch-ua": "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": "\"Windows\""
+                }
 
-                # Step 3: 首次搜索 — 用 Govspider 默认 XHR headers
                 data_template = {
-                    "tab": "ent_tab", "tab_ekeyareas": "0", "province": "",
+                    "tab": "ent_tab", "province": "",
                     "geetest_challenge": "", "geetest_validate": "", "geetest_seccode": "",
                     "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
                     "token": token, "searchword": company, "page": str(page)
@@ -1144,7 +1124,7 @@ class Govspider(JY):
 
                 # 翻页采集
                 result = self._search_paginate(
-                    company=company, params=p,
+                    company=company, params=p, headers=headers,
                     data_template=data_template, page=page
                 )
                 return result
@@ -2136,6 +2116,7 @@ class Govspider(JY):
         except Exception as e:
             logger.error(f"[输入] 读取文件失败: {e}")
         return companies
+
 
     def close_mongo_connection(self):
         """关闭MongoDB连接"""
