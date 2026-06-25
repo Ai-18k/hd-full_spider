@@ -579,10 +579,18 @@ class JY(Hg):
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
         elif data.get("type_name") == "phrase":
             resp_bytes = requests.get(url=data["slice_xiao"], timeout=15).content
-            # coord_str = self.base64_api_s(resp_bytes)
-            coord_str = get_info(resp_bytes)
-            print("语序识别:",coord_str)
-            click_list = [[int(x), int(y)] for p in coord_str.split("|") if len(parts := p.split(",")) == 2 for x, y in [parts]]
+            coord_raw = get_info(resp_bytes)
+            logger.info(f"语序识别原始: {coord_raw}")
+            # get_info 返回 list of [x1,y1,x2,y2] 或 string "x,y|x,y"
+            if isinstance(coord_raw, list):
+                # list of bounding boxes → 转中心点
+                click_list = [[(b[0]+b[2])//2, (b[1]+b[3])//2] for b in coord_raw if len(b) >= 4]
+            elif isinstance(coord_raw, str):
+                click_list = [[int(x), int(y)] for p in coord_raw.split("|")
+                             if len(parts := p.split(",")) == 2 for x, y in [parts]]
+            else:
+                logger.warning(f"未知语序结果类型: {type(coord_raw)}")
+                click_list = []
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
             logger.info(f"语序点选坐标:{click_smark}")
         elif data.get("type_name") == "icon":
@@ -641,7 +649,11 @@ class Govspider(JY):
                         "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\""}
         self.CURRENT_ACCOUNT_KEY = "gov:01"; self.backcomp = []
         self.processed_codes = set(); self.PROCESSED_CODES_KEY = "gov:processed_codes"
-        self.mongo_client = MongoClient(host="192.168.6.167", port=27017)
+        # MongoDB 连接超时 3s（避免阻塞采集流程），服务端超时 5s
+        self.mongo_client = MongoClient(host="127.0.0.1", port=27017,
+                                         serverSelectionTimeoutMS=3000,
+                                         connectTimeoutMS=3000,
+                                         socketTimeoutMS=5000)
         self.mongo_db = self.mongo_client["gov_spider"]
         self.shareholder_collection = self.mongo_db["shareholder_data"]
         self.shareholder_coll2 = self.mongo_db["shareholder_type"]
@@ -721,10 +733,8 @@ class Govspider(JY):
                 except:
                     pass
                 try:
-                    rs_content = response.text
-                    if "努力加载中" in rs_content:
-                        rs_content = self.resp_jsl(rs_content)
-                    self.iv8_env(rs_content)
+                    safe_update(self.cookies, response.cookies.get_dict())
+                    self.iv8_env(response.text)
                 except Exception as e:
                     logger.info(f"处理412状态码时出错: {e}")
                 if retry_func:
@@ -739,22 +749,9 @@ class Govspider(JY):
                         f"代理521信息：{requests.get('https://myip.ipip.net', proxies=self.proxies, timeout=(5, 10)).text}")
                 except:
                     pass
-                try:
-                    logger.info(f"加速乐第一次请求的状态码:{response}")
-                    # 用登录页 URL 做 WAF 恢复（不能用业务 URL，jsl/resp_jsl 依赖 self.url）
-                    saved_url = self.url
-                    self.url = "https://shiming.gsxt.gov.cn/socialuser-use-rllogin.html"
-                    data = self.jsl(response.text)
-                    if data is None:
-                        logger.error("jsl返回None，无法继续521流程")
-                        self.url = saved_url
-                        raise RuntimeError("jsl解析失败")
-                    ct_content = self.resp_jsl(data)
-                    self._last_rs_content = self.first_req(ct_content)
-                    self.iv8_env(self._last_rs_content)
-                    self.url = saved_url  # 恢复原 URL
-                except Exception as e:
-                    logger.info(f"处理521状态码时出错: {e}")
+                logger.info(f"unified_request收到521，触发session恢复...")
+                safe_update(self.cookies, response.cookies.get_dict())
+                self._ensure_session_fresh()
                 if retry_func:
                     return retry_func()
                 else:
@@ -837,9 +834,13 @@ class Govspider(JY):
                             continue
                         ct_content = self.resp_jsl(data)
                         self._last_rs_content = self.first_req(ct_content)
-                    else:  # 412
+                    else:  # 412 — 需通过 first_req 生成 CT cookie 再拿 RS6 页面
                         safe_update(self.cookies, resp.cookies.get_dict())
-                        self._last_rs_content = resp.text
+                        try:
+                            self._last_rs_content = self.first_req(resp.text)
+                        except Exception as e:
+                            logger.warning(f"[Session] first_req失败: {e}, 尝试直接用iv8...")
+                            self._last_rs_content = resp.text
                     self.iv8_env(self._last_rs_content)
                 elif resp.status_code in (403, 404):
                     logger.warning(f"[Session] 探测返回{resp.status_code}, 可能IP受限")
@@ -1001,37 +1002,44 @@ class Govspider(JY):
     def _search_paginate(self, company, params, data_template, page=1, max_pages=50):
         """统一的搜索分页方法
 
-        对搜索结果进行翻页采集，返回所有公司的列表。
-        翻页失败不丢已有数据，返回已收集部分。
-
-        Args:
-            company: 搜索关键词
-            params: 极验验证码参数 (含 lot_number, captcha_output 等)
-            data_template: POST数据模板(含 token, searchword 等)
-            page: 起始页码
-            max_pages: 最大翻页数(安全上限)
-
-        Returns:
-            list: 所有公司的信息列表
+        第1页: POST /corp-query-search-1.html (初始搜索)
+        第2+页: GET /corp-query-search-advancetest.html (翻页, 与浏览器一致)
         """
-        url = "https://shiming.gsxt.gov.cn/corp-query-search-1.html"
         all_data = []
         seen_names = set()
 
         for pg in range(page, page + max_pages):
-            data = dict(data_template)
-            data["page"] = str(pg)
-            # 更新极验参数（复用首次验证结果）
-            for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
-                data[k] = params.get(k, "")
-            rt = lambda pg=pg: self._search_paginate_retry(
-                company, params, data_template, pg)
-
-            r = self.unified_request(
-                url=url, method="POST", data=data,
-                timeout=(10, 20), custom_cookie=self.cookie,
-                retry_func=rt
-            )
+            if pg == 1:
+                # 首页：POST 搜索
+                url = "https://shiming.gsxt.gov.cn/corp-query-search-1.html"
+                method = "POST"
+                req_data = dict(data_template)
+                req_data["page"] = str(pg)
+                for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
+                    req_data[k] = params.get(k, "")
+                rt = lambda: self._search_paginate_retry(company, params, data_template, pg)
+                r = self.unified_request(
+                    url=url, method=method, data=req_data,
+                    timeout=(10, 20), custom_cookie=self.cookie, retry_func=rt)
+            else:
+                # 翻页：GET advancetest.html
+                url = "https://shiming.gsxt.gov.cn/corp-query-search-advancetest.html"
+                method = "GET"
+                req_params = {
+                    "searchword": company, "page": str(pg),
+                    "tab": data_template.get("tab", "ent_tab"),
+                    "tab_ekeyareas": data_template.get("tab_ekeyareas", "0"),
+                    "province": data_template.get("province", ""),
+                    "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
+                    "token": data_template.get("token", ""),
+                    "geetest_challenge": "", "geetest_validate": "", "geetest_seccode": "",
+                }
+                for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
+                    req_params[k] = params.get(k, "")
+                rt = lambda: self._search_paginate_retry(company, params, data_template, pg)
+                r = self.unified_request(
+                    url=url, method=method, params=req_params,
+                    timeout=(10, 20), custom_cookie=self.cookie, retry_func=rt)
 
             if r.status_code != 200:
                 logger.warning(f"[搜索] {company} 第{pg}页返回{r.status_code}，终止翻页")
@@ -1090,23 +1098,45 @@ class Govspider(JY):
         return all_data
 
     def _search_paginate_retry(self, company, params, data_template, page):
-        """搜索翻页的重试函数（刷新验证码+RS6 cookie后重试）"""
+        """搜索翻页的重试函数（刷新验证码+RS6 cookie后重试）
+
+        第1页 POST /corp-query-search-1.html
+        第2+页 GET /corp-query-search-advancetest.html
+        """
         try:
             p2 = self.send()
             for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
                 params[k] = p2[k]
         except Exception as e:
             logger.warning(f"[搜索] 刷新验证码失败: {e}")
-        data = dict(data_template)
-        data["page"] = str(page)
-        for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
-            data[k] = params.get(k, "")
-        return self.unified_request(
-            url="https://shiming.gsxt.gov.cn/corp-query-search-1.html",
-            method="POST", data=data,
-            custom_cookie=self.cookie,
-            timeout=(10, 20), retry_func=None
-        )
+
+        if page == 1:
+            data = dict(data_template)
+            data["page"] = str(page)
+            for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
+                data[k] = params.get(k, "")
+            return self.unified_request(
+                url="https://shiming.gsxt.gov.cn/corp-query-search-1.html",
+                method="POST", data=data,
+                custom_cookie=self.cookie,
+                timeout=(10, 20), retry_func=None)
+        else:
+            req_params = {
+                "searchword": company, "page": str(page),
+                "tab": data_template.get("tab", "ent_tab"),
+                "tab_ekeyareas": data_template.get("tab_ekeyareas", "0"),
+                "province": data_template.get("province", ""),
+                "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
+                "token": data_template.get("token", ""),
+                "geetest_challenge": "", "geetest_validate": "", "geetest_seccode": "",
+            }
+            for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
+                req_params[k] = params.get(k, "")
+            return self.unified_request(
+                url="https://shiming.gsxt.gov.cn/corp-query-search-advancetest.html",
+                method="GET", params=req_params,
+                custom_cookie=self.cookie,
+                timeout=(10, 20), retry_func=None)
 
 
     def searchcompany(self, company, page=1):
