@@ -1,0 +1,96 @@
+                    """法定代表人", "负责人", "经营者", "投资人", "执行事务合伙人"""
+                    # 字段映射，去除空白和特殊字符后做比对
+                    field_map = {
+                        "统一社会信用代码": "tyxydm",
+                        "企业名称": "companyName",
+                        "名称": "companyName",
+                        "注册号": "gszch",
+                        "法定代表人": "legalName",
+                        "负责人": "legalName",
+                        "经营者": "legalName",
+                        "投资人": "legalName",
+                        "执行事务合伙人": "legalName",
+                        "类型": "companyType",
+                        "成立日期": "dateOfEstablishment",
+                        "注册日期": "dateOfEstablishment",
+                        "注册资本": "registeredCapital",
+                        "登记机关": "registrationAuthority",
+                        "登记状态": "registrationStatus",
+                        "住所": "registeredAddress",
+                        "经营场所": "registeredAddress",
+                        "经营范围": "businessScope",
+                        "营业期限": "yyqx",
+                    }
+                    # 初始化目标字段
+                    result = {
+                        "companyName": None,
+                        "companyType": None,
+                        "registeredAddress": None,
+                        "legalName": None,
+                        "dateOfEstablishment": None,
+                        "registrationAuthority": None,
+                        "registrationStatus": None,
+                        "businessScope": None,
+                        "tyxydm": None,
+                        # "shzzlx": None,  # 类型
+                        "yyqx": None,
+                        "gszch": "",
+                        "registeredCapital": ""
+                    }
+                    # 解析所有dl
+                    dls = soup.find_all("dl")
+                    for dl in dls:
+                        dt = dl.find("dt")
+                        dd = dl.find("dd")
+                        if not dt or not dd:
+                            continue
+                        raw_key = dt.get_text(strip=True)
+                        key = clean_key(raw_key)
+                        value = dd.get_text(strip=True)
+                        # 处理title属性
+                        if not value and dd.has_attr("title"):
+                            value = dd["title"].strip()
+                        # 匹配字段
+                        for k, v in field_map.items():
+                            if k in key:
+                                # 兼容 shzzlx
+                                # if v == "companyType":
+                                #     result["shzzlx"] = value
+                                if v == "dateOfEstablishment":
+                                    # 格式化日期为 YYYY-MM-DD
+                                    date_text = value
+                                    date_match = re.match(r"(\d{4})年(\d{2})月(\d{2})日", date_text)
+                                    if date_match:
+                                        formatted_date = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
+                                        result[v] = formatted_date
+                                    else:
+                                        result[v] = value
+                                else:
+                                    result[v] = value
+                                break
+
+                    # 兼容"类型"字段的 shzzlx
+                    # if result["companyType"]:
+                    #     result["shzzlx"] = result["companyType"]
+
+                    yyzz_all_div = soup.find("div", class_="yyzz-all")
+
+                    if yyzz_all_div:
+                        table = yyzz_all_div.find("table", class_="yyzz-table")
+                        if table:
+                            trs = table.find_all("tr")
+                            for tr in trs:
+                                tds = tr.find_all("td")
+                                if len(tds) >= 2:
+                                    key_text = tds[0].get_text(strip=True).replace('\xa0', '').replace('\u2003', '').replace(
+                                        '\u2002', '').replace('\u2009', '')
+                                    # 营业期限、合伙期限....
+                                    if "营业期限" in key_text or "合伙期限" in key_text:
+                                        value_text = tds[1].get_text(strip=True)
+                                        result["yyqx"] = value_text
+                                        break
+                                    else:
+                                        with open("未找到营业期限的公司.txt","a", encoding="utf-8") as f:
+                                            f.write("{}\n".format(info["name"]))
+                    if result["yyqx"] == "至  长期":
+                        result["yyqx"] = result['dateOfEstablishment'] + result["yyqx"]
