@@ -714,14 +714,13 @@ class Govspider(JY):
             else:
                 raise ValueError(f"不支持的请求方法: {method}")
             # 处理响应状态码
+            # 生成带时间戳的唯一文件名（避免覆盖）
             if response.status_code == 200:
-                with open("Node_control/unified_request_200.html", "w", encoding="utf-8") as f:
-                    f.write(response.text)
                 if "NGIDERRORCODE" in response.text:
                     logger.error("账号异常！！切换账号。。。。")
                     # user = self.ltouser()
                     # self.next_login(user)
-                    raise RuntimeError("账号异常(NGIDERRORCODE)，需切换账号")
+                    return False
                 else:
                     return response
             elif response.status_code == 412:
@@ -1222,7 +1221,6 @@ class Govspider(JY):
     # ================================================================
     # 公司详情页提取 — 基本信息 + 各板块URL
     # ================================================================
-
     def vhpage(self, info):
         """获取公司详情页，提取基本工商信息 + 各数据板块API端点
 
@@ -1454,10 +1452,10 @@ class Govspider(JY):
                 logger.info(hrefs)
         return herf_list
 
+
     # ================================================================
     # 年报数据采集
     # ================================================================
-
     def get_anCheId(self, url):
         """获取年报年份列表，返回最新年份的 anCheId"""
 
@@ -1556,7 +1554,6 @@ class Govspider(JY):
     # ================================================================
     # 股东出资采集
     # ================================================================
-
     def equity_pledge(self, type, params, datalist, page):
         """股东出资数据提取并保存到MongoDB
 
@@ -1607,7 +1604,6 @@ class Govspider(JY):
     # ================================================================
     # 工商变更采集
     # ================================================================
-
     def Brchange(self, comlist, datalist, page):
         """工商变更数据提取并保存到MongoDB"""
         while True:
@@ -1868,10 +1864,10 @@ class Govspider(JY):
             data = {"draw": 1, "start": 0, "length": "10"}
             retry_func = lambda: self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=None)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=None)
             resp = self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=retry_func)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=retry_func)
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
                 for item in items:
@@ -1895,10 +1891,10 @@ class Govspider(JY):
             data = {"draw": 1, "start": 0, "length": "10"}
             retry_func = lambda: self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=None)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=None)
             resp = self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=retry_func)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=retry_func)
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
                 for item in items:
@@ -1922,10 +1918,10 @@ class Govspider(JY):
             data = {"draw": 1, "start": 0, "length": "10"}
             retry_func = lambda: self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=None)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=None)
             resp = self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=retry_func)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=retry_func)
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
                 for item in items:
@@ -1949,16 +1945,17 @@ class Govspider(JY):
             data = {"draw": 1, "start": 0, "length": "10"}
             retry_func = lambda: self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=None)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=None)
             resp = self.unified_request(
                 url=url, method='POST', data=data,
-                timeout=(10, 15), retry_func=retry_func)
+                timeout=(10, 15), custom_cookie=self.cookie, retry_func=retry_func)
             if resp.status_code == 200:
                 items = resp.json().get("data", [])
-                for item in items:
-                    item['created_at'] = datetime.now()
-                    item['company'] = comlist.get('company', '')
                 if items:
+                    for item in items:
+                        item['created_at'] = datetime.now()
+                        item['company'] = comlist.get('company', '')
+                        logger.info(f"【*】行政许可数据:{item}")
                     self.mongo_db["admin_license"].insert_many(items)
                 logger.info(f"[行政许可] 采集到 {len(items)} 条")
                 return items
@@ -1967,10 +1964,10 @@ class Govspider(JY):
             logger.error(f"[行政许可] {e}")
             return None
 
+
     # ================================================================
     # 采集编排
     # ================================================================
-
     def _process_single_company(self, info):
         """处理单个公司的全板块数据采集
 
@@ -2088,7 +2085,6 @@ class Govspider(JY):
     # ================================================================
     # 已处理标记 (内存 + MongoDB 持久化)
     # ================================================================
-
     @property
     def processed_collection(self):
         """获取或创建 processed_companies 集合"""

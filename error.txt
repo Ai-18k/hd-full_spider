@@ -3,3 +3,8 @@
 2026-06-26 01:16:36.943 | INFO     | __main__:vhpage:1257 - vhpage状态码:<Response [200]>
 2026-06-26 01:16:37.012 | INFO     | __main__:_process_single_company:1986 - [详情页] URL提取完成, 板块数=12
 2026-06-26 01:16:37.012 | INFO     | __main__:_process_single_company:1988 - 【*】detailData:{'companyName': None, 'companyType': None, 'registeredAddress': None, 'legalName': None, 'dateOfEstablishment': None, 'registrationAuthority': None, 'registrationStatus': None, 'businessScope': None, 'tyxydm': None, 'yyqx': '1999年09月09日 至  2040年09月08日', 'gszch': '', 'registeredCapital': ''}
+
+
+
+https://shiming.gsxt.gov.cn/%7BFD3169D0CCD94FA60BB21603AED3C4D861FB78D5C05A27441C09748C16DAB7CAA9F1E47F93A3ABC66A6E49E5D5FADD71C34D4F4D314D314D4F4D31DFC522C1BDC1C3BFC3BF5C46A158B2A5E070-1782459175579%7D
+https://shiming.gsxt.gov.cn/%7BFD3169D0CCD94FA60BB21603AED3C4D861FB78D5C05A27441C09748C16DAB7CAA9F1E47F93A3ABC66A6E49E5D5FADD71C34D4F4D314D314D4F4D31DFC522C1BDC1C3BFC3BF5C46A158B2A5E070-1782459175579%7D
