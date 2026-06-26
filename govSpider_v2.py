@@ -25,12 +25,12 @@ import hashlib
 import iv8
 import urllib.parse
 import threading
-
+from redis import Redis
 
 def proxy_list():
     # return {
-    # "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
-    # "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
+    #     "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
+    #     "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
     # }
     return None
 
@@ -553,6 +553,7 @@ class JY(Hg):
         elif ct == "nine": info.update({"slice_xiao": "https://static.geetest.com/" + data["imgs"], "bg_da": "https://static.geetest.com/" + data["ques"][0], "nine_nums": data["nine_nums"]})
         return info
 
+
     def get_random_str(self):
         return "".join(hex(int(65536 * (1 + random.random())))[3:] for _ in range(4))
 
@@ -571,16 +572,18 @@ class JY(Hg):
             if ps.startswith("000"): arg["pow_msg"] = pm; arg["pow_sign"] = ps; break
         return arg
 
+
     def jy_shibie(self):
         data = self.load_jy()
         if data.get("type_name") == "word":
             bl = [requests.get("https://static.geetest.com/" + u, timeout=15).content for u in data["ques_list"]]
             click_list = get_word_position(requests.get(data["imgs_url"], timeout=15).content, bl)
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
+            logger.info(f"文字点选坐标:{click_smark}")
         elif data.get("type_name") == "phrase":
             resp_bytes = requests.get(url=data["slice_xiao"], timeout=15).content
             coord_raw = get_info(resp_bytes)
-            logger.info(f"语序识别原始: {coord_raw}")
+            # logger.info(f"语序识别原始: {coord_raw}")
             # get_info 返回 list of [x1,y1,x2,y2] 或 string "x,y|x,y"
             if isinstance(coord_raw, list):
                 # list of bounding boxes → 转中心点
@@ -597,10 +600,12 @@ class JY(Hg):
             bl = [requests.get("https://static.geetest.com/" + u, timeout=15).content for u in data["ques_list"]]
             click_list = get_icon_position(requests.get(data["imgs_url"], timeout=15).content, bl)
             click_smark = [[int(i[0]) * 33, int(int(i[1]) * 49.7)] for i in click_list]
+            logger.info(f"图标点选坐标:{click_smark}")
         elif data.get("type_name") == "nine":
             tg = requests.get(data["bg_da"], timeout=15).content; bg = requests.get(data["slice_xiao"], timeout=15).content
             im = Image.open(BytesIO(bg)).convert("RGBA"); buf = BytesIO(); im.save(buf, format="PNG")
             click_smark, qc = get_nine_position(tg, split_image(buf.getvalue()), data["nine_nums"])
+            logger.info(f"九宫格点选坐标:{click_smark}")
         else:
             logger.warning(f"未知验证码类型: {data.get('type_name')}"); click_smark = None
         data["click_smark"] = click_smark
@@ -638,6 +643,8 @@ class Govspider(JY):
 
     def __init__(self):
         super().__init__()
+        self.conn = Redis(host='192.168.6.172', port=14771, db=10, password='fer@nhaweif576KUG')
+        self.local_conn = Redis("192.168.6.175", 15456, 0, "fer@nhaweif576KUG", socket_connect_timeout=1155)
         self.headers = {"Accept": "*/*", "Accept-Language": "zh-CN,zh;q=0.9", "Cache-Control": "no-cache",
                         "Connection": "keep-alive", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                         "Origin": "https://shiming.gsxt.gov.cn", "Pragma": "no-cache",
@@ -718,9 +725,9 @@ class Govspider(JY):
             if response.status_code == 200:
                 if "NGIDERRORCODE" in response.text:
                     logger.error("账号异常！！切换账号。。。。")
-                    # user = self.ltouser()
-                    # self.next_login(user)
-                    return False
+                    user = self.ltouser()
+                    self.next_login(user)
+                    raise ConnectionError("账号异常！！")
                 else:
                     return response
             elif response.status_code == 412:
@@ -804,6 +811,7 @@ class Govspider(JY):
             except Exception as e:
                 logger.error(f"get_fresh_cookie: {e}")
         return self.cookies.copy() if isinstance(self.cookies, dict) else {}
+
 
     def _ensure_session_fresh(self):
         """轻量级探测：GET首页检查cookie是否新鲜，遇521/412自动恢复"""
@@ -903,10 +911,10 @@ class Govspider(JY):
         logger.error(f"登录失败: {response.status_code}")
         return False
 
+
     # ================================================================
     # 搜索接口 — 动态 token + 稳定性增强
     # ================================================================
-
     def _extract_search_token(self, html=None):
         """从页面提取搜索 token（多模式 + 诊断日志）
 
@@ -1050,7 +1058,9 @@ class Govspider(JY):
 
             if "NGIDERRORCODE" in r.text:
                 logger.error(f"[搜索] 账号异常，终止翻页")
-                break
+                user = self.ltouser()
+                self.next_login(user)
+                return self.searchcompany(company, page)
 
             html = etree.HTML(r.text)
 
@@ -1286,26 +1296,38 @@ class Govspider(JY):
                             f"年报年份:{nburl}\n年报详情:{banurl}\n商标:{sburl}\n行政许可:{xzurl}\n")
                 # --- 提取基本工商信息 （页面结构: div.yyzz-all > div.top + table.yyzz-table）---
                 result = {
-                    "companyName": None, "companyType": None,
-                    "registeredAddress": None, "legalName": None,
-                    "dateOfEstablishment": None, "registrationAuthority": None,
-                    "registrationStatus": None, "businessScope": None,
-                    "tyxydm": None, "yyqx": None,
-                    "gszch": "", "registeredCapital": ""
+                    "companyName": "",
+                    "companyType": "",
+                    "registeredAddress": "",
+                    "legalName": "",
+                    "dateOfEstablishment": "",
+                    "registrationAuthority": "",
+                    "registrationStatus": "",
+                    "businessScope": "",
+                    "tyxydm": "",
+                    "yyqx": "",
+                    "gszch": "",
+                    "registeredCapital": ""
                 }
 
                 # 字段映射（clean后的key → result key）
                 field_map = {
                     "统一社会信用代码": "tyxydm",
-                    "名称": "companyName", "企业名称": "companyName",
+                    "名称": "companyName",
+                    "企业名称": "companyName",
                     "注册号": "gszch",
                     "类型": "companyType",
-                    "住所": "registeredAddress", "经营场所": "registeredAddress",
-                    "法定代表人": "legalName", "负责人": "legalName",
-                    "经营者": "legalName", "投资人": "legalName",
+                    "住所": "registeredAddress",
+                    "经营场所": "registeredAddress",
+                    "营业场所": "registeredAddress",
+                    "法定代表人": "legalName",
+                    "负责人": "legalName",
+                    "经营者": "legalName",
+                    "投资人": "legalName",
                     "执行事务合伙人": "legalName",
                     "注册资本": "registeredCapital",
-                    "成立日期": "dateOfEstablishment", "注册日期": "dateOfEstablishment",
+                    "成立日期": "dateOfEstablishment",
+                    "注册日期": "dateOfEstablishment",
                     "登记机关": "registrationAuthority",
                     "登记状态": "registrationStatus",
                     "经营范围": "businessScope",
@@ -1451,7 +1473,6 @@ class Govspider(JY):
                 herf_list.append(hrefs)
                 logger.info(hrefs)
         return herf_list
-
 
     # ================================================================
     # 年报数据采集
@@ -1723,6 +1744,7 @@ class Govspider(JY):
                 if response.status_code == 200:
                     totalPage = int(response.json()['totalPage'])
                     items = response.json()["data"]
+                    logger.info(f"【*】商标：{items}")
                     if items:
                         if page >= totalPage:
                             return items
@@ -1745,17 +1767,15 @@ class Govspider(JY):
         logger.info(f"最终数据接口url:{trade_mark_url}")
         data = self.Trademark_send(trade_mark_url, page)
         if data:
-            logger.info(f"【*】商标：{data}")
             self.trademark_info.insert_many(data)
-            logger.info(f"最终商标数据:{data}")
             return data
         else:
             logger.warning(f"无 {comlist['company']} 商标信息！！")
 
+
     # ================================================================
     # 辅助包装器
     # ================================================================
-
     def safe_call(self, func, *args, **kwargs):
         """统一异常处理的函数调用包装器"""
         try:
@@ -1764,11 +1784,11 @@ class Govspider(JY):
             logger.info(f"{func.__name__} 调用异常: {e}")
             return None
 
+
     # ================================================================
     # 板块数据采集方法（供 _process_single_company 调用）
     # 每个 _collect_xxx 独立采集一个板块，失败不影响其他板块
     # ================================================================
-
     def _get_annual_report_info(self, comlist, detailData, company_name):
         """【板块1】年报信息 — 提取企业联系电话 + 参保人数(企业规模)
 
@@ -1803,6 +1823,7 @@ class Govspider(JY):
             logger.error(f"[年报] 整体异常: {e}")
             return detailData
 
+
     def _collect_shareholder_data(self, comlist):
         """【板块2】股东出资信息 — data(出资明细) + type(股东类型)"""
         result_data = None; result_type = None
@@ -1819,6 +1840,7 @@ class Govspider(JY):
             logger.error(f"[股东] {e}")
             return None, None
 
+
     def _collect_business_change(self, comlist):
         """【板块3】工商变更记录 — alterInfoUrl"""
         try:
@@ -1830,6 +1852,7 @@ class Govspider(JY):
         except Exception as e:
             logger.error(f"[工商变更] {e}")
             return None
+
 
     def _collect_intellectual_property(self, comlist):
         """【板块4】知识产权 — IntellectualInfoUrl"""
@@ -1843,6 +1866,7 @@ class Govspider(JY):
             logger.error(f"[知识产权] {e}")
             return None
 
+
     def _collect_trademark_data(self, comlist):
         """【板块5】商标信息 — allTrademarkUrl"""
         try:
@@ -1854,6 +1878,7 @@ class Govspider(JY):
         except Exception as e:
             logger.error(f"[商标] {e}")
             return None
+
 
     def _collect_food_check(self, comlist):
         """【板块6】食品检测信息"""
@@ -1882,6 +1907,7 @@ class Govspider(JY):
             logger.error(f"[食品检测] {e}")
             return None
 
+
     def _collect_product_quality(self, comlist):
         """【板块7】产品质量监督抽查"""
         try:
@@ -1909,6 +1935,7 @@ class Govspider(JY):
             logger.error(f"[产品质量] {e}")
             return None
 
+
     def _collect_random_inspection(self, comlist):
         """【板块8】双随机抽查结果"""
         try:
@@ -1935,6 +1962,7 @@ class Govspider(JY):
         except Exception as e:
             logger.error(f"[双随机抽查] {e}")
             return None
+
 
     def _collect_admin_license(self, comlist):
         """【板块9】行政许可信息"""
@@ -2064,6 +2092,7 @@ class Govspider(JY):
                 logger.info(f"\n[{idx}/{len(datalist)}] 处理: {info.get('name')}")
                 company_result = self._process_single_company(info)
                 if company_result:
+                    logger.success(f"【*】最终工商数据:{company_result['detail']}")
                     all_results.append(company_result)
                     self.append_processed_code(info.get("name", ""))
 
@@ -2082,6 +2111,7 @@ class Govspider(JY):
             logger.error(traceback.format_exc())
             return None
 
+
     # ================================================================
     # 已处理标记 (内存 + MongoDB 持久化)
     # ================================================================
@@ -2097,6 +2127,7 @@ class Govspider(JY):
                 pass
         return self._processed_collection
 
+
     def _load_processed_from_mongo(self):
         """从 MongoDB 加载已处理公司名单到内存"""
         try:
@@ -2110,6 +2141,7 @@ class Govspider(JY):
             logger.info(f"[去重] 从MongoDB加载 {count} 条已处理记录")
         except Exception as e:
             logger.warning(f"[去重] 加载MongoDB记录失败: {e}")
+
 
     def append_processed_code(self, company):
         """添加已处理公司到内存 + MongoDB（持久化断点）"""
@@ -2130,6 +2162,7 @@ class Govspider(JY):
                     logger.info(f"[去重] 已标记: {company_str}")
         except Exception as e:
             logger.error(f"[去重] 标记失败: {e}")
+
 
     def is_processed(self, company):
         """检查公司是否已处理（先查内存，再查MongoDB兜底）"""
@@ -2177,10 +2210,50 @@ class Govspider(JY):
         except Exception as e:
             logger.info(f"关闭MongoDB连接失败: {e}")
 
+
+    def ltouser(self):
+        # 如果没有当前账号，从主队列获取
+        user = self.conn.lpop("gov:user")
+        if user is None:
+            # 检查是否有可重用的账号（24小时过期）
+            current_time = int(time.time())
+            for user_data in self.conn.smembers("gov:already"):
+                # 检查是否超过24小时
+                # if current_time - user_obj.get("end_time", 0) > 86400:
+                self.conn.lpush("gov:user", user_data)
+            user = self.conn.lpop("gov:user")
+            self.conn.srem("gov:already", user)
+            user_obj = json.loads(user.decode("utf-8"))
+            # user_obj["end_time"] = int(time.time())
+            old_user = self.conn.get(self.CURRENT_ACCOUNT_KEY)
+            self.conn.sadd("gov:already", old_user)
+            self.conn.set(self.CURRENT_ACCOUNT_KEY, json.dumps(user_obj))
+            return user_obj
+        else:
+            user_obj = json.loads(user.decode("utf-8"))
+            self.conn.srem("gov:already", user)
+            # 更新使用时间
+            # user_obj["end_time"] = int(time.time())
+            # 检查并移除重复账号
+            # self.remove_duplicate_from_used_set(user_obj)
+            # 设置当前账号
+            old_user=self.conn.get(self.CURRENT_ACCOUNT_KEY)
+            self.conn.sadd("gov:already", old_user)
+            self.conn.set(self.CURRENT_ACCOUNT_KEY, json.dumps(user_obj))
+            return user_obj
+
+    def swich_user(self):
+        """获取可用账号，如果没有可用账号则重新分配"""
+        # 首先尝试从当前账号key获取账号
+        current_account = self.conn.get(self.CURRENT_ACCOUNT_KEY)
+        if current_account:
+            user_obj = json.loads(current_account.decode("utf-8"))
+            return user_obj
+
+
     # ================================================================
     # 登录编排
     # ================================================================
-
     def next_login(self, user):
         """登录流程: WAF穿透 -> 获取公钥+fiKxeghI -> 极验验证 -> 登录"""
         logger.info(f"使用账号: {user.get('user', 'Unknown')}")
@@ -2206,7 +2279,6 @@ class Govspider(JY):
     # ================================================================
     # 批量采集主循环
     # ================================================================
-
     def main(self, companies=None, company_file="companies.txt",
              user=None, continuous=False, interval_range=(5, 15)):
         """批量采集主入口
@@ -2223,7 +2295,8 @@ class Govspider(JY):
             # user = {"user": "17359191389", "pwd": "ASl57456"}
             # user = {"user": "19225906427", "pwd": "hjS564789"}
             # user = {"user": "18965736502", "pwd": "HNg786346"}
-            user = {"user": "18060829306", "pwd": "Kof989345"}
+            # user = {"user": "18060829306", "pwd": "Kof989345"}
+            user = self.swich_user()
 
         # 加载已处理记录（断点续采）
         self._load_processed_from_mongo()

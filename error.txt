@@ -1,10 +1,58 @@
-2026-06-26 01:16:36.356 | WARNING  | __main__:_ensure_session_fresh:850 - [Session] 探测返回403, 可能IP受限
-2026-06-26 01:16:36.356 | INFO     | __main__:vhpage:1245 - ------------------提取工商数据----------------
-2026-06-26 01:16:36.943 | INFO     | __main__:vhpage:1257 - vhpage状态码:<Response [200]>
-2026-06-26 01:16:37.012 | INFO     | __main__:_process_single_company:1986 - [详情页] URL提取完成, 板块数=12
-2026-06-26 01:16:37.012 | INFO     | __main__:_process_single_company:1988 - 【*】detailData:{'companyName': None, 'companyType': None, 'registeredAddress': None, 'legalName': None, 'dateOfEstablishment': None, 'registrationAuthority': None, 'registrationStatus': None, 'businessScope': None, 'tyxydm': None, 'yyqx': '1999年09月09日 至  2040年09月08日', 'gszch': '', 'registeredCapital': ''}
+========================================================
+2026-06-26 16:11:28.669 | INFO     | __main__:_load_processed_from_mongo:2125 - [去重] 从MongoDB加载 18 条已处理记录
+2026-06-26 16:11:28.670 | INFO     | __main__:_load_companies_from_file:2184 - [输入] 从 companies.txt 读取 8 家公司
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2261 - ============================================================
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2262 - 批量采集启动: 共 8 家公司
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2263 - 已处理(跳过): 18 家
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2264 - 账号: 18060829306
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2265 - ============================================================
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2281 - 
+==================================================
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2282 - [1/8] 处理: 阿里巴巴
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2283 - 进度: 成功0 失败0 跳过0
+2026-06-26 16:11:28.670 | INFO     | __main__:main:2284 - ==================================================
+2026-06-26 16:11:28.670 | INFO     | __main__:next_login:2203 - 使用账号: 18060829306
+2026-06-26 16:11:29.482 | INFO     | __main__:main_qe:475 - 加速乐第一次请求的状态码:<Response [521]>
+2026-06-26 16:11:30.440 | INFO     | __main__:jsl:330 - 加速乐第二次请求的状态码:<Response [521]>
+2026-06-26 16:11:31.376 | INFO     | __main__:resp_jsl:367 - 加速乐第三次请求得到瑞数返回的状态码:<Response [412]>
+2026-06-26 16:11:55.512 | SUCCESS  | __main__:fetch:247 - Env Check PASS!!!
+2026-06-26 16:11:59.879 | INFO     | __main__:get_publicKey:459 - 获取密钥 publicKey 成功!!
+2026-06-26 16:12:01.352 | INFO     | __main__:jy_shibie:598 - 语序点选坐标:[[1419, 2733], [7425, 2534], [8019, 6361]]
+2026-06-26 16:12:01.497 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=phrase)...
+2026-06-26 16:12:02.078 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 16:12:03.331 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
 
+2026-06-26 16:12:03.331 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:05.421 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
 
+2026-06-26 16:12:05.421 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:07.190 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
 
-https://shiming.gsxt.gov.cn/%7BFD3169D0CCD94FA60BB21603AED3C4D861FB78D5C05A27441C09748C16DAB7CAA9F1E47F93A3ABC66A6E49E5D5FADD71C34D4F4D314D314D4F4D31DFC522C1BDC1C3BFC3BF5C46A158B2A5E070-1782459175579%7D
-https://shiming.gsxt.gov.cn/%7BFD3169D0CCD94FA60BB21603AED3C4D861FB78D5C05A27441C09748C16DAB7CAA9F1E47F93A3ABC66A6E49E5D5FADD71C34D4F4D314D314D4F4D31DFC522C1BDC1C3BFC3BF5C46A158B2A5E070-1782459175579%7D
+2026-06-26 16:12:07.190 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:08.277 | ERROR    | __main__:loginuser:907 - loginuser登陆失败: 521状态码，需要重试
+2026-06-26 16:12:08.969 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:08.969 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:10.680 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:10.680 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:12.481 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:12.481 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:13.324 | ERROR    | __main__:loginuser:907 - loginuser登陆失败: 521状态码，需要重试
+2026-06-26 16:12:13.982 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:13.982 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:15.830 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:15.830 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:18.175 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:18.176 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:19.589 | ERROR    | __main__:loginuser:907 - loginuser登陆失败: 521状态码，需要重试
+2026-06-26 16:12:20.195 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:20.195 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 16:12:21.920 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+
+2026-06-26 16:12:21.920 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...

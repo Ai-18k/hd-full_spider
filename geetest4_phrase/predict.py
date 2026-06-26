@@ -5,7 +5,6 @@ import cv2
 import math
 import itertools
 from concurrent.futures import ThreadPoolExecutor
-from loguru import logger
 os.environ["YOLO_VERBOSE"] = "False"
 from ultralytics import YOLO
 
@@ -230,25 +229,19 @@ def recognize_text(
     tasks = []
 
     for box in boxes:
-
         x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-
         x1 = max(0, x1)
         y1 = max(0, y1)
         x2 = min(img.shape[1], x2)
         y2 = min(img.shape[0], y2)
-
         if x2 <= x1 or y2 <= y1:
             continue
-
         crop = img[y1:y2, x1:x2]
-
         crop = cv2.resize(
             crop,
             (classify_size, classify_size),
             interpolation=cv2.INTER_NEAREST
         )
-
         tasks.append((crop, (x1, y1, x2, y2), device))
 
     if not tasks:
@@ -307,23 +300,16 @@ def get_info(img_input):
         max_workers=5,
         use_lm_sort=True
     )
-
-    logger.info(f'原始结果: {result["raw_text"]}')
-    logger.info(f'语序优化: {result["final_text"]}')
-
     info = []
-
     for item in result["details"]:
-        logger.info(f"文字：{item['word']} 置信度: {item['conf']} 位置：{item['box']}")
         info.append(item['box'])
-
     return info
 
 
 
-if __name__ == "__main__":
-    img_path = r"imgs\2.jpg"
-
-    res = get_info(img_path)
-    logger.info(res)
+# if __name__ == "__main__":
+#     img_path = r"imgs\2.jpg"
+#
+#     res = get_info(img_path)
+#     logger.info(res)
 
