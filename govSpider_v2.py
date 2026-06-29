@@ -29,8 +29,8 @@ from redis import Redis
 
 def proxy_list():
     # return {
-    #     "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
-    #     "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
+    #     "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"PSFRaaAo", "proxy": "t153.juliangip.cc:18948"},
+    #     "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"PSFRaaAo", "proxy": "t153.juliangip.cc:18948"},
     # }
     return None
 
@@ -90,8 +90,23 @@ requests = requests.Session(impersonate=random.choice(["edge99",
     "safari17_0",
     "safari18_0",
     "safari18_4"
-]))
+]),proxies=proxy_list())
 functo_code = None
+
+
+# 中文数字映射
+CN_NUM = {
+    '零': 0, '壹': 1, '贰': 2, '叁': 3, '肆': 4,
+    '伍': 5, '陆': 6, '柒': 7, '捌': 8, '玖': 9,
+    '两': 2
+}
+
+# 单位映射
+CN_UNITS = {
+    '拾': 10, '佰': 100, '仟': 1000,
+    '万': 10000, '亿': 100000000
+}
+
 
 class CT:
     """瑞数CT WAF 穿透层 — 处理 521→521→412 以及CT cookie生成"""
@@ -100,6 +115,7 @@ class CT:
         self.cookies = {}
         self._cookies_lock = threading.Lock()
         self._last_rs_content = None
+        self._proxy_created_at = time.time()  # 代理创建时间，用于3分钟到期检测
         self.url = "https://shiming.gsxt.gov.cn/socialuser-use-rllogin.html"
         self.waf_url = "https://shiming.gsxt.gov.cn/ctct/nwaf/waf.log"
         self.proxies = proxy_list()
@@ -744,7 +760,7 @@ class Govspider(JY):
                 except Exception:
                     logger.info("iv8_env失败，尝试full session恢复...")
                     try:
-                        self._ensure_session_fresh()
+                        self._check_and_recover()
                     except Exception as e2:
                         logger.warning(f"Session恢复也失败: {e2}")
                 if retry_func:
@@ -759,8 +775,10 @@ class Govspider(JY):
                         f"代理521信息：{requests.get('https://myip.ipip.net', proxies=self.proxies, timeout=(5, 10)).text}")
                 except:
                     pass
-                logger.info(f"unified_request收到521，触发session恢复...")
+                logger.info(f"unified_request收到521，检查代理并触发session恢复...")
                 safe_update(self.cookies, response.cookies.get_dict())
+                if self._proxy_expired():
+                    self._rotate_proxy()
                 self._ensure_session_fresh()
                 if retry_func:
                     return retry_func()
@@ -867,6 +885,18 @@ class Govspider(JY):
         logger.error("[Session] 刷新失败!")
         return False
 
+    def _check_and_recover(self):
+        """完整的会话恢复：先检查代理，再尝试轻量恢复，失败则标记需重登录"""
+        if self._proxy_expired():
+            logger.warning("[代理] 已过期，切换代理并标记需重登录")
+            self._rotate_proxy()
+            return False  # 返回False触发main()中的重登录
+        if not self._ensure_session_fresh():
+            # 轻量恢复失败，切代理试试
+            self._rotate_proxy()
+            return False
+        return True
+
 
     def loginuser(self, user, params):
         for _ in range(5):
@@ -910,6 +940,23 @@ class Govspider(JY):
                 logger.error(f"loginuser登陆失败: {e}")
         logger.error(f"登录失败: {response.status_code}")
         return False
+
+    # ================================================================
+    # 代理管理 — 3分钟到期自动切换 + 触发完整WAF恢复
+    # ================================================================
+
+    PROXY_TTL = 150  # 代理有效期秒数（2.5分钟，留30s缓冲）
+
+    def _proxy_expired(self):
+        """检查代理是否即将过期"""
+        elapsed = time.time() - self._proxy_created_at
+        return elapsed > self.PROXY_TTL
+
+    def _rotate_proxy(self):
+        """切换代理并重置计时器"""
+        self.proxies = proxy_list()
+        self._proxy_created_at = time.time()
+        logger.info(f"[代理] 已切换，新代理生效时间: {time.strftime('%H:%M:%S')}")
 
 
     # ================================================================
@@ -1280,6 +1327,7 @@ class Govspider(JY):
                             return "https://shiming.gsxt.gov.cn" + match.group(1)
                         logger.info(f"未找到{var_name}")
                         return None
+
                 bgurl = extract_url("alterInfoUrl")        # 工商变更
                 shaurl = extract_url("shareholderUrl")      # 股东信息
                 # spurl = extract_url("getFoodChkInfoUrl")    # 食品检测
@@ -1309,7 +1357,6 @@ class Govspider(JY):
                     "gszch": "",
                     "registeredCapital": ""
                 }
-
                 # 字段映射（clean后的key → result key）
                 field_map = {
                     "统一社会信用代码": "tyxydm",
@@ -1333,12 +1380,198 @@ class Govspider(JY):
                     "经营范围": "businessScope",
                     "营业期限": "yyqx",
                 }
-
                 def clean_key(text):
                     """清洗字段名中的特殊空白字符（BeautifulSoup已将&emsp;/&thinsp;/&nbsp;解码为Unicode）"""
                     text = re.sub(r'[\s\u00a0\u2002\u2003\u2009]+', '', text)
                     text = text.replace("：", "").replace(":", "").strip()
                     return text
+
+                def parse_small(s):
+                    """解析小于一万的部分"""
+                    if not s:
+                        return 0
+
+                    num = 0
+                    i = 0
+                    while i < len(s):
+                        ch = s[i]
+                        if ch in CN_NUM:
+                            digit = CN_NUM[ch]
+                            if i + 1 < len(s) and s[i + 1] in CN_UNITS:
+                                unit = CN_UNITS[s[i + 1]]
+                                num += digit * unit
+                                i += 2
+                            else:
+                                num += digit
+                                i += 1
+                        elif ch in CN_UNITS:
+                            if ch in ['拾', '十']:
+                                if i == 0 or s[i - 1] == '零':
+                                    num += 10
+                            i += 1
+                        else:
+                            i += 1
+                    return num
+
+                def parse_int(s):
+                    """解析整数部分，返回以"元"为单位的数值"""
+                    if not s:
+                        return 0
+
+                    result = 0
+                    # 按亿拆分
+                    if '亿' in s:
+                        parts = s.split('亿', 1)
+                        result += parse_small(parts[0]) * 100000000
+                        s = parts[1] if len(parts) > 1 else ''
+                    # 按万拆分
+                    if '万' in s:
+                        parts = s.split('万', 1)
+                        result += parse_small(parts[0]) * 10000
+                        s = parts[1] if len(parts) > 1 else ''
+                    # 剩余部分
+                    if s:
+                        result += parse_small(s)
+                    return result
+
+                def chinese_amount_to_number(chinese_str):
+                    """
+                    将中文金额转为数字（单位：元）
+                    返回: (金额（元）, 币种, 原始单位字符串)
+                    """
+                    original = chinese_str
+                    # 支持的币种（按优先级排序，避免"人民币"被"人"等误匹配）
+                    CURRENCIES = ['人民币', '美元', '港币', '日元', '欧元', '英镑']
+                    # 1. 检测并去掉币种前缀
+                    currency = None
+                    for cur in CURRENCIES:
+                        if chinese_str.startswith(cur):
+                            currency = cur
+                            chinese_str = chinese_str[len(cur):]
+                            break
+
+                    # 2. 去掉结尾的"整"或"正"
+                    chinese_str = chinese_str.rstrip('整正')
+
+                    # 3. 记录原始单位（用于显示）
+                    original_unit = '元'
+                    if '亿元' in chinese_str:
+                        original_unit = '亿元'
+                    elif '万元' in chinese_str:
+                        original_unit = '万元'
+                    elif '元' in chinese_str:
+                        original_unit = '元'
+                    elif chinese_str.endswith('亿'):
+                        original_unit = '亿元'
+                    elif chinese_str.endswith('万'):
+                        original_unit = '万元'
+
+                    # 4. 分离整数和小数部分（按"元"拆分）
+                    if '元' in chinese_str:
+                        parts = chinese_str.split('元', 1)
+                        int_part = parts[0]
+                        dec_part = parts[1] if len(parts) > 1 else ''
+                    else:
+                        # 没有"元"，整个都是整数部分
+                        int_part = chinese_str
+                        dec_part = ''
+
+                    # 5. 解析整数部分
+                    integer_value = parse_int(int_part)
+
+                    # 6. 解析小数部分（角/分）
+                    decimal_value = 0.0
+                    if dec_part:
+                        if '角' in dec_part:
+                            idx = dec_part.find('角')
+                            if idx > 0 and dec_part[idx - 1] in CN_NUM:
+                                decimal_value += CN_NUM[dec_part[idx - 1]] * 0.1
+                            elif idx == 0:
+                                decimal_value += 0.1
+                        if '分' in dec_part:
+                            idx = dec_part.find('分')
+                            if idx > 0 and dec_part[idx - 1] in CN_NUM:
+                                decimal_value += CN_NUM[dec_part[idx - 1]] * 0.01
+                            elif idx == 0:
+                                decimal_value += 0.01
+
+                    total_yuan = integer_value + decimal_value
+                    return total_yuan, currency, original_unit
+
+                def format_amount(chinese_str):
+                    """
+                    格式化输出中文金额
+                    - 人民币：不显示币种
+                    - 其他币种：显示币种，格式为"万币种"（如"万美元"）
+                    - 超过1万自动转为万单位显示（不四舍五入）
+                    """
+                    yuan, currency, unit = chinese_amount_to_number(chinese_str)
+
+                    # 根据数值大小自动决定显示单位
+                    # 如果金额大于等于1万，自动转为万显示
+                    if abs(yuan) >= 10000:
+                        # 转为万
+                        value = yuan / 10000
+
+                        # 构建单位：万 + 币种
+                        if currency and currency != '人民币':
+                            # 其他币种：显示为"万币种"，如"万美元"、"万港币"
+                            unit_display = f'万{currency}'
+                        else:
+                            # 人民币或不带币种：显示为"万元"
+                            unit_display = '万元'
+
+                        # 计算需要保留的小数位数（不四舍五入，保留所有小数位）
+                        # 将value转为字符串，计算小数位数
+                        value_str = f"{value:.10f}"  # 先转为足够精度的字符串
+                        # 去除末尾的0
+                        value_str = value_str.rstrip('0').rstrip('.')
+                        # 获取小数位数
+                        if '.' in value_str:
+                            decimals = len(value_str.split('.')[1])
+                        else:
+                            decimals = 0
+
+                        # 使用format保留所有小数位（不四舍五入）
+                        # 由于Python的format会四舍五入，我们使用字符串截断
+                        if decimals > 0:
+                            # 使用Decimal来避免四舍五入
+                            from decimal import Decimal, getcontext
+                            getcontext().prec = 50  # 设置高精度
+                            value_decimal = Decimal(str(value))
+                            # 格式化为字符串，保留所有小数位
+                            value_str = f"{value_decimal:.{decimals}f}"
+                        else:
+                            value_str = str(int(value))
+
+                        output = f"{value_str} {unit_display}"
+                    else:
+                        # 小于1万，用元显示
+                        value = yuan
+                        if currency and currency != '人民币':
+                            unit_display = currency
+                        else:
+                            unit_display = '元'
+
+                        # 计算需要保留的小数位数
+                        value_str = f"{value:.10f}"
+                        value_str = value_str.rstrip('0').rstrip('.')
+                        if '.' in value_str:
+                            decimals = len(value_str.split('.')[1])
+                        else:
+                            decimals = 0
+
+                        if decimals > 0:
+                            from decimal import Decimal, getcontext
+                            getcontext().prec = 50
+                            value_decimal = Decimal(str(value))
+                            value_str = f"{value_decimal:.{decimals}f}"
+                        else:
+                            value_str = str(int(value))
+
+                        output = f"{value_str} {unit_display}"
+
+                    return output
 
                 yyzz_div = soup.find("div", class_="yyzz-all")
                 if yyzz_div:
@@ -1379,6 +1612,8 @@ class Govspider(JY):
                 # 3. 营业期限后处理
                 if result.get("yyqx") and "至  长期" in str(result["yyqx"]):
                     result["yyqx"] = (result.get("dateOfEstablishment") or "") + result["yyqx"]
+
+                result["registeredCapital"]=format_amount(result["registeredCapital"])
 
                 # 构建返回
                 comlist = {
@@ -2009,8 +2244,8 @@ class Govspider(JY):
         logger.info(f"\n{'='*60}\n采集公司: {company_name}\n{'='*60}")
 
         try:
-            # 第0步：确保session新鲜
-            self._ensure_session_fresh()
+            # 第0步：确保session新鲜（含代理检测）
+            self._check_and_recover()
             # 第一步：获取公司详情页，提取基本信息 + 各板块URL
             comlist, detailData = self.vhpage(info)
             logger.info(f"[详情页] URL提取完成, 板块数={len(comlist)}")
@@ -2018,7 +2253,7 @@ class Govspider(JY):
             # 第二步：年报 (电话+规模) — 必须先获取，为detailData补充字段
             try:
                 iphone = self._get_annual_report_info(comlist, detailData, company_name)
-                detailData["staff_size"] = iphone .get("staffSize", "")
+                # detailData["staff_size"] = iphone .get("staffSize", "")
                 detailData["legalTelephone"]= iphone .get("legalTelephone", "")
             except Exception as e:
                 logger.error(f"[年报] 采集失败: {e}")
@@ -2039,7 +2274,7 @@ class Govspider(JY):
             # 每2个板块后刷新session（RS6 cookie TTL<1s）
             for i, (name, fn) in enumerate(section_collectors):
                 if i > 0 and i % 2 == 0:
-                    self._ensure_session_fresh()
+                    self._check_and_recover()
                 try:
                     data = fn()
                     result["sections"][name] = data
@@ -2180,10 +2415,11 @@ class Govspider(JY):
             pass
         return False
 
+
+
     # ================================================================
     # 公司列表输入
     # ================================================================
-
     @staticmethod
     def _load_companies_from_file(filepath="companies.txt"):
         """从文件读取公司名列表（每行一个）"""
@@ -2317,7 +2553,7 @@ class Govspider(JY):
         logger.info("=" * 60)
         logger.info(f"批量采集启动: 共 {total} 家公司")
         logger.info(f"已处理(跳过): {len(self.processed_codes)} 家")
-        logger.info(f"账号: {user.get('user', 'N/A')}")
+        # logger.info(f"账号: {user.get('user', 'N/A')}")
         logger.info("=" * 60)
 
         logged_in = False
@@ -2339,21 +2575,25 @@ class Govspider(JY):
             logger.info(f"进度: 成功{success_count} 失败{fail_count} 跳过{skipped_count}")
             logger.info(f"{'=' * 50}")
 
-            # 尝试登录（首次或检测到会话过期时）
+            # 尝试登录（首次或检测到会话/代理过期时）
             if not logged_in:
                 try:
+                    if self._proxy_expired():
+                        self._rotate_proxy()
                     self.next_login(user)
+                    self._rotate_proxy()  # 登录成功后重置代理计时器
                     logged_in = True
                 except Exception as e:
-                    logger.error(f"[登录] 失败: {e}，休眠后重试...")
-                    time.sleep(30)
+                    logger.error(f"[登录] 失败: {e}，切换代理后重试...")
+                    self._rotate_proxy()
+                    time.sleep(10)
                     continue
 
-            # 会话健康检查
-            if not self._ensure_session_fresh():
-                logger.warning(f"[会话] {company} 前会话过期，重新登录...")
+            # 会话健康检查（含代理到期检测）
+            if not self._check_and_recover():
+                logger.warning(f"[会话] {company} 前会话/代理过期，重新登录...")
                 logged_in = False
-                time.sleep(10)
+                time.sleep(5)
                 continue
 
             # 采集数据
