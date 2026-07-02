@@ -27,12 +27,14 @@ import urllib.parse
 import threading
 from redis import Redis
 
+
 def proxy_list():
     # return {
     #     "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
     #     "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user":"17773711437", "pwd":"Qa9Uu2kf", "proxy": "t152.juliangip.cc:15041"},
     # }
     return None
+
 
 def safe_update(dst: dict, src: dict):
     """只更新合法 cookie（value 必须是 str/bytes）"""
@@ -92,6 +94,7 @@ requests = requests.Session(impersonate=random.choice(["edge99",
     "safari18_4"
 ]))
 functo_code = None
+
 
 class CT:
     """瑞数CT WAF 穿透层 — 处理 521→521→412 以及CT cookie生成"""
@@ -643,8 +646,10 @@ class Govspider(JY):
 
     def __init__(self):
         super().__init__()
-        self.conn = Redis(host='192.168.6.172', port=14771, db=10, password='fer@nhaweif576KUG')
-        self.local_conn = Redis("192.168.6.175", 15456, 0, "fer@nhaweif576KUG", socket_connect_timeout=1155)
+        # self.conn = Redis(host='192.168.6.172', port=14771, db=10, password='fer@nhaweif576KUG')
+        # self.local_conn = Redis("192.168.6.175", 15456, 0, "fer@nhaweif576KUG", socket_connect_timeout=1155)
+        self.conn = Redis(host='192.168.6.167', port=10824, db=10, password='e8Mzr}$%jsuCxKn4r#mm')
+        self.local_conn = Redis("192.168.6.167", 14228, 0, "uf$vU_1~wA0mB@Z+", socket_connect_timeout=1155)
         self.headers = {"Accept": "*/*", "Accept-Language": "zh-CN,zh;q=0.9", "Cache-Control": "no-cache",
                         "Connection": "keep-alive", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                         "Origin": "https://shiming.gsxt.gov.cn", "Pragma": "no-cache",
