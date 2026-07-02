@@ -1,58 +1,228 @@
 ========================================================
-2026-06-26 16:11:28.669 | INFO     | __main__:_load_processed_from_mongo:2125 - [去重] 从MongoDB加载 18 条已处理记录
-2026-06-26 16:11:28.670 | INFO     | __main__:_load_companies_from_file:2184 - [输入] 从 companies.txt 读取 8 家公司
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2261 - ============================================================
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2262 - 批量采集启动: 共 8 家公司
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2263 - 已处理(跳过): 18 家
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2264 - 账号: 18060829306
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2265 - ============================================================
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2281 - 
+2026-06-26 17:23:21.105 | INFO     | __main__:_load_processed_from_mongo:2141 - [去重] 从MongoDB加载 38 条已处理记录
+2026-06-26 17:23:21.105 | INFO     | __main__:_load_companies_from_file:2200 - [输入] 从 companies.txt 读取 8 家公司
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2317 - ============================================================
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2318 - 批量采集启动: 共 8 家公司
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2319 - 已处理(跳过): 38 家
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2320 - 账号: 17359022757
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2321 - ============================================================
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2337 -
 ==================================================
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2282 - [1/8] 处理: 阿里巴巴
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2283 - 进度: 成功0 失败0 跳过0
-2026-06-26 16:11:28.670 | INFO     | __main__:main:2284 - ==================================================
-2026-06-26 16:11:28.670 | INFO     | __main__:next_login:2203 - 使用账号: 18060829306
-2026-06-26 16:11:29.482 | INFO     | __main__:main_qe:475 - 加速乐第一次请求的状态码:<Response [521]>
-2026-06-26 16:11:30.440 | INFO     | __main__:jsl:330 - 加速乐第二次请求的状态码:<Response [521]>
-2026-06-26 16:11:31.376 | INFO     | __main__:resp_jsl:367 - 加速乐第三次请求得到瑞数返回的状态码:<Response [412]>
-2026-06-26 16:11:55.512 | SUCCESS  | __main__:fetch:247 - Env Check PASS!!!
-2026-06-26 16:11:59.879 | INFO     | __main__:get_publicKey:459 - 获取密钥 publicKey 成功!!
-2026-06-26 16:12:01.352 | INFO     | __main__:jy_shibie:598 - 语序点选坐标:[[1419, 2733], [7425, 2534], [8019, 6361]]
-2026-06-26 16:12:01.497 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=phrase)...
-2026-06-26 16:12:02.078 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
-2026-06-26 16:12:03.331 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2338 - [1/8] 处理: 阿里巴巴
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2339 - 进度: 成功0 失败0 跳过0
+2026-06-26 17:23:21.106 | INFO     | __main__:main:2340 - ==================================================
+2026-06-26 17:23:21.106 | INFO     | __main__:next_login:2259 - 使用账号: 17359022757
+2026-06-26 17:23:21.829 | INFO     | __main__:main_qe:475 - 加速乐第一次请求的状态码:<Response [521]>
+2026-06-26 17:23:23.643 | INFO     | __main__:jsl:330 - 加速乐第二次请求的状态码:<Response [521]>
+2026-06-26 17:23:24.347 | INFO     | __main__:resp_jsl:367 - 加速乐第三次请求得到瑞数返回的状态码:<Response [412]>
+2026-06-26 17:23:27.789 | SUCCESS  | __main__:fetch:247 - Env Check PASS!!!
+2026-06-26 17:23:29.280 | INFO     | __main__:get_publicKey:459 - 获取密钥 publicKey 成功!!
+2026-06-26 17:23:32.676 | INFO     | __main__:jy_shibie:598 - 语序点选坐标:[[7953, 3081], [3498, 2186], [4686, 4721]]
+2026-06-26 17:23:32.810 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=phrase)...
+2026-06-26 17:23:33.579 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:23:35.783 | INFO     | __main__:unified_request:737 - 代理412信息：当前 IP：223.85.91.31  来自于：中国 四川 甘孜藏族自治州  移动
 
-2026-06-26 16:12:03.331 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:05.421 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+2026-06-26 17:23:37.483 | INFO     | __main__:loginuser:884 - loginuser: status=200
+2026-06-26 17:23:37.484 | SUCCESS  | __main__:loginuser:892 - 登录成功
+2026-06-26 17:23:37.730 | SUCCESS  | __main__:next_login:2267 - 账号 17359022757 登录完成
+2026-06-26 17:23:37.957 | INFO     | __main__:detilinfo:2071 - ********************************************************************************
+2026-06-26 17:23:37.957 | INFO     | __main__:detilinfo:2072 - 开始采集: 阿里巴巴
+2026-06-26 17:23:37.957 | INFO     | __main__:detilinfo:2073 - ********************************************************************************
+2026-06-26 17:23:37.957 | INFO     | __main__:detilinfo:2077 - [搜索] 正在搜索公司...
+2026-06-26 17:23:38.198 | INFO     | __main__:_extract_search_token:966 - [Token] 从input提取: 2016
+2026-06-26 17:23:41.891 | INFO     | __main__:jy_shibie:603 - 图标点选坐标:[[7029, 5566], [1188, 5218], [3960, 3628]]
+2026-06-26 17:23:42.005 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=icon)...
+2026-06-26 17:23:42.288 | WARNING  | __main__:send:636 - [验证码] 结果: fail, 原因: ?
+2026-06-26 17:23:44.086 | INFO     | __main__:jy_shibie:608 - 九宫格点选坐标:[[1, 2], [3, 1], [2, 2]]
+2026-06-26 17:23:44.187 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=nine)...
+2026-06-26 17:23:44.454 | WARNING  | __main__:send:636 - [验证码] 结果: fail, 原因: ?
+2026-06-26 17:23:47.263 | INFO     | __main__:jy_shibie:608 - 九宫格点选坐标:[[1, 2], [2, 1], [3, 3]]
+2026-06-26 17:23:47.363 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=nine)...
+2026-06-26 17:23:47.637 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:23:47.637 | INFO     | __main__:searchcompany:1175 - [搜索] 验证码获取成功
+2026-06-26 17:23:47.896 | INFO     | __main__:_search_preflight:1009 - [预检] image.gif: 200
+2026-06-26 17:23:50.066 | INFO     | __main__:getdata:1474 - {'name': '阿里巴巴（中国）网络技术有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7B422FD6CE73C7F0B8B4ACA91D11CD7BC6DEE5C7CB7F44985AA317AAB2896D7B63665D8143BA0E2C64AC115991B3B694201A57C66FA3AE0B8D80119F191407288B28F528F5288B28F5BA014705D805A67BA67B3982C49CD76185B46E62BE08989D202C46B2FD72AFDFFDB57D5F64D2DEB4FB26FB26FB26-1782465831278%7D', 'legalName': '蒋芳', 'business_status': '存续', 'gszch': '', 'tyxydm': '91330100716105852F', 'dateOfEstablishment': '1999年09月09日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.067 | INFO     | __main__:getdata:1474 - {'name': '阿里巴巴信息港(广东)有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7B335EA7BF02B681C9C5DDD86C60BC0AB7AF94B6BA0E35E92BD266DBC3F81C0A12172CF032CB7F5D15DD6028E0C2C7E5516B26B71ED2DF7AFCF160EE68657659665984598459AD70B84C7364DF992DF0BF4B09BDF22FF22F9B974A972C98504F438B56409D12CF80CFF0A8E355B1805A568A3CACA91418723D726DCEBE9CD41C3E05B3BFD59A479A479A47-1782465831278%7D', 'legalName': '王朝阳', 'business_status': '存续（在营、开业、在册）', 'gszch': '', 'tyxydm': '91441600MA51G7H87U', 'dateOfEstablishment': '2018年03月29日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.067 | INFO     | __main__:getdata:1474 - {'name': '阿里巴巴信息港（乌兰察布）有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7B177A839B2692A5EDE1F9FC4844982E938BB0929E2A11CD0FF642FFE7DC382E363308D416EF5B7931F9440CC4E6E3C1754F02933AF6FB5ED8D544CA4C41527D322DF02DF02D8EC8DFC07BF457F4E3DCB1A798DE1C0BB0BCAB5F4976B4A36B9F8074CFD05F48105BED0938E2EE32841411ACA0CA85CAD57606246CA486BD0B076D22FF22FF22FF-1782465831278%7D', 'legalName': '王朝阳', 'business_status': '存续（在营、开业、在册）', 'gszch': '', 'tyxydm': '91150900MA0PWETR80', 'dateOfEstablishment': '2018年05月29日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.067 | INFO     | __main__:getdata:1474 - {'name': '杭州阿里巴巴泽泰信息技术有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7BF4996078C571460E021A1FABA77BCD706853717DC9F22EEC15A11C043FDBCDD5D0EB37F50CB89AD21AA7EF2705002296ACE170D91518BD3B36A729AFA2B19E3D9E439E439E3D9E430C83BC61BC61BC1FC21F0046B2EAA117F3C21814C87EEEEB565A307F30723D4D6F27EFCDF6404C2669B469B469B4-1782465831278%7D', 'legalName': '沈沉', 'business_status': '存续', 'gszch': '', 'tyxydm': '91330110MA28054B7Q', 'dateOfEstablishment': '2016年11月15日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.067 | INFO     | __main__:getdata:1474 - {'name': '阿里巴巴江苏信息科技有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7BD1BD455CE055632A273E3A8F825FE8544D775459ECD60BC8308539201AFFE8F1F5CF12D1299CBFF63F83CA03202407B289C555FD303C981F13830C8B8795BB195A865A865AF8BB67924E924E924E924E92D16B28F47AA6531DC198D26580B06B66BB0C9D992528430D435DFF8EADE42D0E34838EE5AB77AB77AB77-1782465831279%7D', 'legalName': '王朝阳', 'business_status': '存续（在营、开业、在册）', 'gszch': '', 'tyxydm': '91320691MA221RTH5E', 'dateOfEstablishment': '2020年07月22日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.068 | INFO     | __main__:getdata:1474 - {'name': '阿里巴巴信息港（江苏）有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7B670BF3EA56E3D59C91888C3934E95EE2FBC1E2EF5A60BD7E86338F96AC495E474379A4679F2A094089357CB59692B1043F73E34B868A2EA9A535BA3D31230DAFEC30EC30EC4E0DD124F824F824F824F8246A29938D78F60340B5ECA611F4C41F12CF78E9ED515C37C28C924E3F1C559CBF85323F541AC61AC61AC6-1782465831279%7D', 'legalName': '王朝阳', 'business_status': '存续（在营、开业、在册）', 'gszch': '', 'tyxydm': '91320691MA1W3E4N6N', 'dateOfEstablishment': '2018年02月06日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.068 | INFO     | __main__:getdata:1474 - {'name': '杭州阿里巴巴海外数字商业有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7BBDCE292F8C260F594B4D56FCEE2C84272104382A80A567BB5CF65553768C848299BC7EA245EFD38553F0A6704C576BC1E5B6398E5C4FF46C7FF060F8EBE6D76AD714D714D76AD714458617D417D41746D7722E722A6C39916B44809250F8766DCEDCA8421312D1BF83D5033F1AB2A0D4854685468546-1782465831280%7D', 'legalName': '蔡啸天', 'business_status': '存续', 'gszch': '', 'tyxydm': '91330108MA2HYCQMXY', 'dateOfEstablishment': '2020年06月18日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.071 | INFO     | __main__:getdata:1474 - {'name': '北京阿里巴巴信息技术有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7BB9CA2D2B88220B5D4F4952F8EA28802325003C2E84A163BF58F25157728880869DB87AA641EBD78157F4A27448536FC5E1B23D8A584BF0687BF464FCEFE2D382D310D310D343A90C5D77D28A603194043B1AA1308B1ABF1A2504B92179E92AE9C3E24716ABEDB810EAC50113D179F7EC4F5D2978297529477B2DFBC7E24A582C7DBE7DBE7DBE-1782465831280%7D', 'legalName': '马云', 'business_status': '注销', 'gszch': '', 'tyxydm': '911101057001486120', 'dateOfEstablishment': '1998年10月14日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.072 | INFO     | __main__:getdata:1474 - {'name': '阿里巴巴（张家口）信息科技有限公司', 'link': 'https://shiming.gsxt.gov.cn/%7B582BCCCA69C3EABCAEA8B3190BC961C2C4E1DDCF6540825EB913B0B6936961677C599B47A00A3660B6154395A9B28E240053DC6BB9AA11899A15851D0E033263DE1DDE1DDE8F32F1A96A6BA86BA86B3A66A5F93AF968AB41824182DE3472278F755A9E8C4EE66873D0C2B6E7B6EA5739055385B99C34265203C003C003C0-1782465831280%7D', 'legalName': '王朝阳', 'business_status': '存续（在营、开业、在册）', 'gszch': '', 'tyxydm': '91130705MA0FAQEG6A', 'dateOfEstablishment': '2020年08月06日', 'oldCompanyNameList': ['阿里巴巴京西信息科技有限公司']}
+2026-06-26 17:23:50.072 | INFO     | __main__:getdata:1474 - {'name': '海南阿里巴巴影业文化产业基金合伙企业（有限合伙）', 'link': 'https://shiming.gsxt.gov.cn/%7BEB997F78DA71590E1D1A00ABB87BD27077536E7DD6F231EC0AA1030420DBD2D5CFEB28F513B885D205A7F0271A003D96B3E16FD90A18A23B29A736AFBDB181A14A884A884A1A3A6AA86AA86A3AF83A1AD8884A134A1787C0943DC6E82D3EFD54DBC1637005252599254A7720F7CAEE47542171B371B371B3-1782465831281%7D', 'legalName': '海南阿里巴巴影业管理有限公司', 'business_status': '存续（在营、开业、在册）', 'gszch': '', 'tyxydm': '91460100MA5RD3XY8M', 'dateOfEstablishment': '2016年08月01日', 'oldCompanyNameList': []}
+2026-06-26 17:23:50.072 | INFO     | __main__:_search_paginate:1086 - [搜索] 阿里巴巴 第1页: 10条新数据 (累计10)
+2026-06-26 17:23:50.072 | INFO     | __main__:_search_paginate:1100 - [搜索] 阿里巴巴 共100条结果, 约10页
+2026-06-26 17:23:51.412 | INFO     | __main__:_search_paginate:1069 - [搜索] 阿里巴巴 第2页无结果，终止翻页
+2026-06-26 17:23:51.412 | INFO     | __main__:_search_paginate:1110 - [搜索] 阿里巴巴 完成: 共10条, 2页
+2026-06-26 17:23:51.412 | INFO     | __main__:detilinfo:2084 - [搜索] 找到 10 家企业
+2026-06-26 17:23:51.412 | INFO     | __main__:detilinfo:2092 -
+[1/10] 处理: 阿里巴巴（中国）网络技术有限公司
+2026-06-26 17:23:51.412 | INFO     | __main__:_process_single_company:2009 -
+============================================================
+采集公司: 阿里巴巴（中国）网络技术有限公司
+============================================================
+2026-06-26 17:23:51.728 | INFO     | __main__:vhpage:1253 - ------------------提取工商数据----------------
+2026-06-26 17:23:53.231 | INFO     | __main__:vhpage:1265 - vhpage状态码:<Response [200]>
+2026-06-26 17:23:53.294 | INFO     | __main__:vhpage:1295 - 工商变更:https://shiming.gsxt.gov.cn/%7B91C40525A02C235367477AF6C226A82D0D0E1420ACAF4BB170FCD2DB556141CDCFBA13827643DE6055FC4AF4C1EAFD66FD18FD18FD66FD186FEC92E80DE873967396EC6F1171028C5059-1782465834330%7D
+股东信息:https://shiming.gsxt.gov.cn/%7B174283A326AAA5D5E1C1FC7044A02EAB8B8892A62A29CD37F67A60133D1D295A9B92BD89A9252752FB6A9EAB3688BD14A21C2902158E15F015F0158E15F087047A00E5009B7E9B7E0487F999EA64B8B1-1782465834330%7D
+股东出资:https://shiming.gsxt.gov.cn/%7B9BCE0F2FAA2629596D4D70FCC82CA22707041E2AA6A541BB7AF6F5110B08ECC5C622D8199597E24BDA2E1B86380DA412AC99B2A53EA540A540A53EA54037B4CAB055B02BCE2BCEB43749295AD40801-1782465834330%7D
+知识产权:https://shiming.gsxt.gov.cn/%7BB2E1260083090076446259D3E1038B082E2B37058F8A689453D92BC941737C7341129AECC4CB39DB27E06A6E1DB225D7E47FC7F45BEB53604D5CC15CBF5CBF5CC15CBFCE4B334FAC4FD231D2314DC8B0D6A32BF1FE-1782465834332%7D
+年报年份:https://shiming.gsxt.gov.cn/%7B6036F4D751DED2A196B58B0433D459DFFCFCE5D25D5DBA43810E23C45A2A1D1E290427D037CE0C8382F45ECC3B0D932E18B207BA8CA4B028B056B056B028B05622A2DFA640A63ED83ED8A1215C3F4FC21D17F6C126AB003EB88FDEAA4C-1782465834329%7D
+年报详情:https://shiming.gsxt.gov.cn/%7B6036F4D751DED2A196B58B0433D459DFFCFCE5D25D5DBA43810E23C423507D770136B07251DCDDF00E39B6B7C16BF90E38A61B2D87328FB991851D85638563851D85631797EA9375930BED0BED9414690A7AF72822-1782465834329%7D
+商标:https://shiming.gsxt.gov.cn/%7B3561A180048987F6C3E2DE5366830C88A9ABB08508272F27D237CC0C810E2F002E1BC6E9C80B131B13E603F838B5B6C26AFA0F3BA7182C84338CB892841E84608460841E84601694EB9074900AEE0AEE951768097BF42921-1782465834331%7D
+行政许可:https://shiming.gsxt.gov.cn/%7B6731F3D056D9D5A691B28C0334D35ED8FBFBE2D55A5ABD448609EE8C8CDA2DCA33F17E7F09A331C6F06ED3E54FFA4771594DD54DAB4DAB4DD54DABDF5F225BBD5BC325C3255CDCA1C2B23FE0EA-1782465834329%7D
 
-2026-06-26 16:12:05.421 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:07.190 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+2026-06-26 17:23:53.297 | INFO     | __main__:_process_single_company:2016 - [详情页] URL提取完成, 板块数=9
+2026-06-26 17:23:55.157 | INFO     | __main__:get_anCheId:1493 - get_anCheId状态码:<Response [200]>
+2026-06-26 17:23:55.158 | INFO     | __main__:_get_annual_report_info:1799 - [年报] anCheId结果: {'addr': '', 'alterStockInfoUrl': '', 'alterTotalPageUrl': '', 'alterUrl': '', 'anCheDate': 1781781941000, 'anCheId': 'PROVINCENODENUM330000D5E754F6518647628A4400BF65A4F8F9', 'anCheYear': '2025', 'anType': '', 'annBaseJsUrl': '', 'annBaseUrl': '', 'annPbBaseJsUrl': '', 'annPbBaseUrl': '', 'annRepFrom': '0', 'annSfcBaseJsUrl': '', 'annSfcBaseUrl': '', 'annSfccSocsecinfoUrl': '', 'annSocsecinfoUrl': '', 'annulLicenceUrl': '', 'assGro': None, 'assGroDis': '', 'baseInfoUrl': '', 'branchProductionUrl': '', 'busSt': '', 'busSt_CN': '', 'colEmplNum': None, 'colGraNum': None, 'dependentEntName': '', 'dependentName': '', 'dependentUniscId': '', 'dis': None, 'disEmplNum': None, 'disPerNum': None, 'email': '', 'empNum': None, 'empNumDis': '', 'entName': '', 'entType': 'e', 'forGuaranteeinfoUrl': '', 'forInvestmentUrl': '', 'holdingSmsg': '', 'holdingSmsgDis': '', 'holdingSmsg_cn': '', 'isDis': None, 'lastModifiedPerson': '', 'lastModifiedTime': None, 'liaGro': None, 'liaGroDis': '', 'maiBusInc': None, 'maiBusIncDis': '', 'mainBusiAct': '', 'netInc': None, 'netIncDis': '', 'numParM': None, 'parIns': '', 'parIns_CN': '', 'postalCode': '', 'pripId': '3301972003000297', 'proGro': None, 'proGroDis': '', 'ratGro': None, 'ratGroDis': '', 'regNo': '', 'resParMSign': '', 'resParSecSign': '', 'retEmplNum': None, 'retSolNum': None, 'sExtSequence': '', 'sponsorUrl': '', 'tel': '', 'totEqu': None, 'totEquDis': '', 'uneEmplNum': None, 'uneNum': None, 'uniscId': '', 'vAnnPbAssetUrl': '', 'vAnnualReportAlters': None, 'vAnnualReportSfcBranchUrl': '', 'vannualSfcAssertUrl': '', 'vendInc': None, 'vendIncDis': '', 'webSiteInfoUrl': '', 'womemPNum': None, 'womemPNumDis': ''}
+2026-06-26 17:23:55.158 | INFO     | __main__:anreport:1502 - -----------------年报获取采集------------------
+2026-06-26 17:23:56.333 | INFO     | __main__:anreport:1518 - anreport状态码:<Response [200]>
+2026-06-26 17:23:59.827 | INFO     | __main__:anreport_s:1568 - anreport_s状态码:<Response [200]>
+2026-06-26 17:23:59.827 | INFO     | __main__:_get_annual_report_info:1819 - [年报] 电话=0571-85022088, 参保人数=3573
+2026-06-26 17:23:59.827 | INFO     | __main__:_process_single_company:2026 - 【*】工商数据结果:{'companyName': '阿里巴巴（中国）网络技术有限公司', 'companyType': '有限责任公司（港澳台投资、非独资）', 'registeredAddress': '浙江省杭州市滨江区网商路699号', 'legalName': '蒋芳', 'dateOfEstablishment': '1999-09-09', 'registrationAuthority': '', 'registrationStatus': '', 'businessScope': '一般项目：软件开发；软件销售；技术服务、技术开发、技术咨询、技术交流、技术转让、技术推广；网络设备销售；计算机软硬件及辅助设备零售；计算机软硬件及辅助设备批发；非居住房地产租赁；停车场服务；翻译服务；物业管理；业务培训（不含教育培训、职业技能培训等需取得许可的培训）(除依法须经批准的项目外，凭营业执照依法自主开展经营活动)。', 'tyxydm': '91330100716105852F', 'yyqx': '1999年09月09日 至  2040年09月08日', 'gszch': '', 'registeredCapital': '美元伍拾玖亿玖仟伍佰玖拾捌万伍仟肆佰零伍元伍角', 'legalTelephone': '0571-85022088', 'staffSize': 3573, 'staff_size': 3573}
+2026-06-26 17:24:02.955 | INFO     | __main__:unified_request:758 - 代理521信息：当前 IP：117.153.190.122  来自于：中国 湖北 恩施土家族苗族自治州  移动
 
-2026-06-26 16:12:07.190 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:08.277 | ERROR    | __main__:loginuser:907 - loginuser登陆失败: 521状态码，需要重试
-2026-06-26 16:12:08.969 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+2026-06-26 17:24:02.955 | INFO     | __main__:unified_request:762 - unified_request收到521，触发session恢复...
+2026-06-26 17:24:03.538 | WARNING  | __main__:_ensure_session_fresh:839 - [Session] 收到521, 刷新WAF...
+2026-06-26 17:24:04.113 | INFO     | __main__:jsl:330 - 加速乐第二次请求的状态码:<Response [521]>
+2026-06-26 17:24:07.053 | WARNING  | __main__:_ensure_session_fresh:865 - [Session] 探测异常(attempt 1/3): expected string or bytes-like object
+2026-06-26 17:24:09.619 | INFO     | __main__:_ensure_session_fresh:861 - [Session] 探测返回405, 视为会话正常
+2026-06-26 17:24:11.698 | INFO     | __main__:safe_call:1784 - equity_pledge 调用异常: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:14.152 | INFO     | __main__:safe_call:1784 - equity_pledge 调用异常: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:14.153 | INFO     | __main__:_collect_shareholder_data:1837 - [股东] 出资=False, 类型=False
+2026-06-26 17:24:16.955 | INFO     | __main__:safe_call:1784 - Brchange 调用异常: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:16.955 | INFO     | __main__:_collect_business_change:1850 - [工商变更] 采集到 0 条
+2026-06-26 17:24:17.147 | INFO     | __main__:_ensure_session_fresh:861 - [Session] 探测返回405, 视为会话正常
+2026-06-26 17:24:20.091 | INFO     | __main__:safe_call:1784 - Intpro 调用异常: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:20.091 | INFO     | __main__:_collect_intellectual_property:1863 - [知识产权] 采集到 0 条
+2026-06-26 17:24:23.087 | INFO     | __main__:Trademark_f:1725 - Trademark_f异常：未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:23.087 | INFO     | __main__:Trademark_main:1765 - 无法获取tradeMarkUrlData
+2026-06-26 17:24:23.087 | INFO     | __main__:_collect_trademark_data:1876 - [商标] 采集到 0 条
+2026-06-26 17:24:23.317 | INFO     | __main__:_ensure_session_fresh:861 - [Session] 探测返回405, 视为会话正常
+2026-06-26 17:24:25.676 | ERROR    | __main__:_collect_admin_license:1992 - [行政许可] 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:25.676 | SUCCESS  | __main__:_process_single_company:2055 - [阿里巴巴（中国）网络技术有限公司] 采集完成: {'shareholder': True, 'business_change': False, 'intellectual_property': False, 'trademark': '0条', 'admin_license': False}
+2026-06-26 17:24:25.676 | SUCCESS  | __main__:detilinfo:2095 - 【*】最终工商数据:{'companyName': '阿里巴巴（中国）网络技术有限公司', 'companyType': '有限责任公司（港澳台投资、非独资）', 'registeredAddress': '浙江省杭州市滨江区网商路699号', 'legalName': '蒋芳', 'dateOfEstablishment': '1999-09-09', 'registrationAuthority': '', 'registrationStatus': '', 'businessScope': '一般项目：软件开发；软件销售；技术服务、技术开发、技术咨询、技术交流、技术转让、技术推广；网络设备销售；计算机软硬件及辅助设备零售；计算机软硬件及辅助设备批发；非居住房地产租赁；停车场服务；翻译服务；物业管理；业务培训（不含教育培训、职业技能培训等需取得许可的培训）(除依法须经批准的项目外，凭营业执照依法自主开展经营活动)。', 'tyxydm': '91330100716105852F', 'yyqx': '1999年09月09日 至  2040年09月08日', 'gszch': '', 'registeredCapital': '美元伍拾玖亿玖仟伍佰玖拾捌万伍仟肆佰零伍元伍角', 'legalTelephone': '0571-85022088', 'staffSize': 3573, 'staff_size': 3573}
+2026-06-26 17:24:25.677 | INFO     | __main__:append_processed_code:2162 - [去重] 已标记: 阿里巴巴（中国）网络技术有限公司
+2026-06-26 17:24:25.677 | INFO     | __main__:detilinfo:2092 -
+[2/10] 处理: 阿里巴巴信息港(广东)有限公司
+2026-06-26 17:24:25.677 | INFO     | __main__:_process_single_company:2009 -
+============================================================
+采集公司: 阿里巴巴信息港(广东)有限公司
+============================================================
+2026-06-26 17:24:25.880 | INFO     | __main__:_ensure_session_fresh:861 - [Session] 探测返回405, 视为会话正常
+2026-06-26 17:24:25.880 | INFO     | __main__:vhpage:1253 - ------------------提取工商数据----------------
+2026-06-26 17:24:28.040 | ERROR    | __main__:_process_single_company:2059 - [阿里巴巴信息港(广东)有限公司] 处理异常: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:24:28.040 | ERROR    | __main__:detilinfo:2109 - [主流程] 阿里巴巴 采集异常: local variable 'result' referenced before assignment
+2026-06-26 17:24:28.040 | ERROR    | __main__:detilinfo:2111 - Traceback (most recent call last):
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 794, in unified_request
+    raise ConnectionError(f"未识别unified_request请求验证码{response}:需要重试")
+ConnectionError: 未识别unified_request请求验证码<Response [405]>:需要重试
 
-2026-06-26 16:12:08.969 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:10.680 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+During handling of the above exception, another exception occurred:
 
-2026-06-26 16:12:10.680 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:12.481 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+Traceback (most recent call last):
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 2015, in _process_single_company
+    comlist, detailData = self.vhpage(info)
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 1261, in vhpage
+    response = self.unified_request(
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 797, in unified_request
+    return retry_func()
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 1256, in retry_func
+    return self.unified_request(
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 799, in unified_request
+    raise e
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 794, in unified_request
+    raise ConnectionError(f"未识别unified_request请求验证码{response}:需要重试")
+ConnectionError: 未识别unified_request请求验证码<Response [405]>:需要重试
 
-2026-06-26 16:12:12.481 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:13.324 | ERROR    | __main__:loginuser:907 - loginuser登陆失败: 521状态码，需要重试
-2026-06-26 16:12:13.982 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+During handling of the above exception, another exception occurred:
 
-2026-06-26 16:12:13.982 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:15.830 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+Traceback (most recent call last):
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 2093, in detilinfo
+    company_result = self._process_single_company(info)
+  File "E:\project\app\win10_openclaw_share\hddemo\govSpider_v2.py", line 2060, in _process_single_company
+    return result
+UnboundLocalError: local variable 'result' referenced before assignment
 
-2026-06-26 16:12:15.830 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:18.175 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
+2026-06-26 17:24:28.042 | INFO     | __main__:append_processed_code:2162 - [去重] 已标记: 阿里巴巴
+2026-06-26 17:24:28.042 | SUCCESS  | __main__:main:2364 - [阿里巴巴] 采集完成 ✓
+2026-06-26 17:24:28.042 | INFO     | __main__:main:2374 - [休眠] 13.4s ...
+2026-06-26 17:24:41.462 | INFO     | __main__:main:2337 -
+==================================================
+2026-06-26 17:24:41.462 | INFO     | __main__:main:2338 - [2/8] 处理: 腾讯科技
+2026-06-26 17:24:41.462 | INFO     | __main__:main:2339 - 进度: 成功1 失败0 跳过0
+2026-06-26 17:24:41.462 | INFO     | __main__:main:2340 - ==================================================
+2026-06-26 17:24:43.134 | INFO     | __main__:_ensure_session_fresh:861 - [Session] 探测返回405, 视为会话正常
+2026-06-26 17:24:43.134 | INFO     | __main__:detilinfo:2071 - ********************************************************************************
+2026-06-26 17:24:43.134 | INFO     | __main__:detilinfo:2072 - 开始采集: 腾讯科技
+2026-06-26 17:24:43.134 | INFO     | __main__:detilinfo:2073 - ********************************************************************************
+2026-06-26 17:24:43.134 | INFO     | __main__:detilinfo:2077 - [搜索] 正在搜索公司...
+2026-06-26 17:24:43.350 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回405
+2026-06-26 17:24:43.350 | WARNING  | __main__:_get_search_token:987 - [Token] 第1次提取失败，重试...
+2026-06-26 17:24:45.836 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回405
+2026-06-26 17:24:45.836 | WARNING  | __main__:_get_search_token:987 - [Token] 第2次提取失败，重试...
+2026-06-26 17:24:48.125 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回405
+2026-06-26 17:24:48.125 | WARNING  | __main__:_get_search_token:987 - [Token] 第3次提取失败，重试...
+2026-06-26 17:24:50.128 | ERROR    | __main__:_get_search_token:989 - [Token] 3次提取均失败，使用空字符串（可能不需要token）
+2026-06-26 17:24:50.128 | WARNING  | __main__:_extract_search_token:978 - [Token] 未找到token! 页面JS变量: []
+2026-06-26 17:24:50.128 | WARNING  | __main__:searchcompany:1171 - [搜索] 未获取到token，使用空值尝试
+2026-06-26 17:24:53.184 | INFO     | __main__:jy_shibie:603 - 图标点选坐标:[[2112, 3777], [5973, 6560], [5973, 1689]]
+2026-06-26 17:24:53.302 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=icon)...
+2026-06-26 17:24:55.152 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:24:55.152 | INFO     | __main__:searchcompany:1175 - [搜索] 验证码获取成功
+2026-06-26 17:24:55.759 | INFO     | __main__:_search_preflight:1009 - [预检] image.gif: 200
+2026-06-26 17:25:00.195 | INFO     | __main__:jy_shibie:603 - 图标点选坐标:[[7557, 3826], [5478, 6958], [1353, 4870]]
+2026-06-26 17:25:00.342 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=icon)...
+2026-06-26 17:25:00.590 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:25:02.428 | WARNING  | __main__:searchcompany:1196 - [搜索] 腾讯科技 第1次尝试失败: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:25:05.663 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回405
+2026-06-26 17:25:05.663 | WARNING  | __main__:_get_search_token:987 - [Token] 第1次提取失败，重试...
+2026-06-26 17:25:07.902 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回405
+2026-06-26 17:25:07.902 | WARNING  | __main__:_get_search_token:987 - [Token] 第2次提取失败，重试...
+2026-06-26 17:25:10.106 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回405
+2026-06-26 17:25:10.106 | WARNING  | __main__:_get_search_token:987 - [Token] 第3次提取失败，重试...
+2026-06-26 17:25:12.112 | ERROR    | __main__:_get_search_token:989 - [Token] 3次提取均失败，使用空字符串（可能不需要token）
+2026-06-26 17:25:12.112 | WARNING  | __main__:_extract_search_token:978 - [Token] 未找到token! 页面JS变量: []
+2026-06-26 17:25:12.112 | WARNING  | __main__:searchcompany:1171 - [搜索] 未获取到token，使用空值尝试
+2026-06-26 17:25:14.815 | INFO     | __main__:jy_shibie:603 - 图标点选坐标:[[4092, 7355], [7953, 5317], [4158, 3578]]
+2026-06-26 17:25:14.961 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=icon)...
+2026-06-26 17:25:15.201 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:25:15.201 | INFO     | __main__:searchcompany:1175 - [搜索] 验证码获取成功
+2026-06-26 17:25:15.404 | INFO     | __main__:_search_preflight:1009 - [预检] image.gif: 200
+2026-06-26 17:25:18.507 | INFO     | __main__:jy_shibie:603 - 图标点选坐标:[[1089, 2485], [6567, 5119], [3069, 6510]]
+2026-06-26 17:25:18.622 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=icon)...
+2026-06-26 17:25:18.869 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:25:20.204 | WARNING  | __main__:searchcompany:1196 - [搜索] 腾讯科技 第2次尝试失败: 未识别unified_request请求验证码<Response [405]>:需要重试
+2026-06-26 17:25:23.862 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回521
+2026-06-26 17:25:23.863 | WARNING  | __main__:_get_search_token:987 - [Token] 第1次提取失败，重试...
+2026-06-26 17:25:26.380 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回521
+2026-06-26 17:25:26.380 | WARNING  | __main__:_get_search_token:987 - [Token] 第2次提取失败，重试...
+2026-06-26 17:25:28.929 | WARNING  | __main__:_extract_search_token:942 - [Token] index.html返回521
+2026-06-26 17:25:28.929 | WARNING  | __main__:_get_search_token:987 - [Token] 第3次提取失败，重试...
+2026-06-26 17:25:30.937 | ERROR    | __main__:_get_search_token:989 - [Token] 3次提取均失败，使用空字符串（可能不需要token）
+2026-06-26 17:25:30.937 | WARNING  | __main__:_extract_search_token:978 - [Token] 未找到token! 页面JS变量: []
+2026-06-26 17:25:30.937 | WARNING  | __main__:searchcompany:1171 - [搜索] 未获取到token，使用空值尝试
+2026-06-26 17:25:32.651 | INFO     | __main__:jy_shibie:582 - 文字点选坐标:[[924, 6311], [7821, 5069], [4224, 7305]]
+2026-06-26 17:25:33.158 | INFO     | __main__:send:629 - [验证码] 提交验证 (类型=word)...
+2026-06-26 17:25:33.892 | SUCCESS  | __main__:send:632 - 验证码识别成功！！
+2026-06-26 17:25:33.892 | INFO     | __main__:searchcompany:1175 - [搜索] 验证码获取成功
+2026-06-26 17:25:34.710 | INFO     | __main__:_search_preflight:1009 - [预检] image.gif: 521
+2026-06-26 17:25:36.497 | INFO     | __main__:unified_request:758 - 代理521信息：当前 IP：118.124.250.108  来自于：中国 四川 乐山  电信
 
-2026-06-26 16:12:18.176 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:19.589 | ERROR    | __main__:loginuser:907 - loginuser登陆失败: 521状态码，需要重试
-2026-06-26 16:12:20.195 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
-
-2026-06-26 16:12:20.195 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
-2026-06-26 16:12:21.920 | INFO     | __main__:unified_request:756 - 代理521信息：当前 IP：14.145.27.251  来自于：中国 广东 广州  电信
-
-2026-06-26 16:12:21.920 | INFO     | __main__:unified_request:760 - unified_request收到521，触发session恢复...
+2026-06-26 17:25:36.497 | INFO     | __main__:unified_request:762 - unified_request收到521，触发session恢复...
+2026-06-26 17:25:37.493 | WARNING  | __main__:_ensure_session_fresh:839 - [Session] 收到521, 刷新WAF...
+2026-06-26 17:25:38.154 | INFO     | __main__:jsl:330 - 加速乐第二次请求的状态码:<Response [521]>
+2026-06-26 17:25:40.600 | WARNING  | __main__:_ensure_session_fresh:865 - [Session] 探测异常(attempt 1/3): expected string or bytes-like object
+2026-06-26 17:25:43.292 | INFO     | __main__:_ensure_session_fresh:861 - [Session] 探测返回405, 视为会话正常
+2026-06-26 17:25:43.416 | WARNING  | __main__:send:638 - 验证码识别失败 (1/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:43.619 | WARNING  | __main__:send:638 - 验证码识别失败 (2/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:43.780 | WARNING  | __main__:send:638 - 验证码识别失败 (3/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:43.940 | WARNING  | __main__:send:638 - 验证码识别失败 (4/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.148 | WARNING  | __main__:send:638 - 验证码识别失败 (5/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.282 | WARNING  | __main__:send:638 - 验证码识别失败 (6/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.457 | WARNING  | __main__:send:638 - 验证码识别失败 (7/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.641 | WARNING  | __main__:send:638 - 验证码识别失败 (8/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.751 | WARNING  | __main__:send:638 - 验证码识别失败 (9/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.941 | WARNING  | __main__:send:638 - 验证码识别失败 (10/10): Expecting value: line 1 column 1 (char 0)
+2026-06-26 17:25:44.941 | WARNING  | __main__:_search_paginate_retry:1124 - [搜索] 刷新验证码失败: Expecting value: line 1 column 1 (char 0)
