@@ -659,8 +659,8 @@ class Govspider(JY):
 
     def __init__(self):
         super().__init__()
-        self.conn = Redis(host='192.168.6.172', port=14771, db=10, password='fer@nhaweif576KUG')
-        self.local_conn = Redis("192.168.6.175", 15456, 0, "fer@nhaweif576KUG", socket_connect_timeout=1155)
+        self.conn = Redis(host='192.168.6.167', port=10824, db=10, password='e8Mzr}$%jsuCxKn4r#mm')
+        self.local_conn = Redis("192.168.6.167", 14228, 0, "uf$vU_1~wA0mB@Z+", socket_connect_timeout=1155)
         self.headers = {"Accept": "*/*", "Accept-Language": "zh-CN,zh;q=0.9", "Cache-Control": "no-cache",
                         "Connection": "keep-alive", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                         "Origin": "https://shiming.gsxt.gov.cn", "Pragma": "no-cache",
@@ -815,6 +815,7 @@ class Govspider(JY):
                 return retry_func()
             else:
                 raise e
+
     @property
     def cookie(self):
         return self.get_fresh_cookie()
@@ -884,6 +885,7 @@ class Govspider(JY):
                 time.sleep(2)
         logger.error("[Session] 刷新失败!")
         return False
+
 
     def _check_and_recover(self):
         """完整的会话恢复：先检查代理，再尝试轻量恢复，失败则标记需重登录"""
@@ -957,8 +959,6 @@ class Govspider(JY):
         self.proxies = proxy_list()
         self._proxy_created_at = time.time()
         logger.info(f"[代理] 已切换，新代理生效时间: {time.strftime('%H:%M:%S')}")
-
-
     # ================================================================
     # 搜索接口 — 动态 token + 稳定性增强
     # ================================================================

@@ -91,7 +91,6 @@ requests = requests.Session(impersonate=random.choice(["edge99",
     "safari18_0",
     "safari18_4"
 ]))
-functo_code = None
 
 
 class CT:
@@ -677,6 +676,7 @@ class Govspider(JY):
         self.trademark_info = self.mongo_db["trademark_info"]
         self.login_url="https://shiming.gsxt.gov.cn/socialuser-use-login-request.html"
 
+
     def unified_request(self, url, method, params=None, data=None, json_data=None,
                         timeout=(10, 20), custom_headers=None, custom_cookie=None, retry_func=None, **kwargs):
         """
@@ -703,6 +703,18 @@ class Govspider(JY):
         #     headers.update(custom_headers)
         if custom_cookie:
             self.cookies.update(custom_cookie)
+
+        # 浏览器 RS6 Hook 会自动给所有 XHR 请求 URL 追加 ?fiKxeghI=<token>
+        # Python 请求必须手动追加，否则被 400/412/创宇盾拦截
+        # 登录和搜索请求例外：登录 POST body 已含 fiKxeghI；搜索 URL 加 fiKxeghI 反致 400
+        # 详情页例外：fiKxeghI 值由 RS6 hook 变换生成(非原 cookie)，蜘蛛无法复现
+        fi = self.fiKxeghI or self.cookies.get("dUs8TeLcaHgjP", "")
+        if fi and "fiKxeghI" not in url and "shiming.gsxt.gov.cn" in url \
+                and "login-request" not in url \
+                and "corp-query-search" not in url \
+                and "%7B" not in url:
+            url = url + ("&" if "?" in url else "?") + "fiKxeghI=" + fi
+
         try:
             if method.upper() == 'GET':
                 response = requests.get(
@@ -801,6 +813,15 @@ class Govspider(JY):
                     return retry_func()
                 else:
                     raise ConnectionError(f"400 Bad Request: {url}")
+            elif response.status_code == 405:
+                with open("Node_control/unified_request_405.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                logger.warning(f"[unified_request] 405 Method Not Allowed: {url}, 刷新session后重试...")
+                self._ensure_session_fresh()
+                if retry_func:
+                    return retry_func()
+                else:
+                    raise ConnectionError("405状态码，需要重试")
             else:
                 with open(f"Node_control/unified_request_{response.status_code}.html", "w", encoding="utf-8") as f:
                     f.write(response.text)
@@ -810,6 +831,8 @@ class Govspider(JY):
                 return retry_func()
             else:
                 raise e
+
+
     @property
     def cookie(self):
         return self.get_fresh_cookie()
@@ -917,6 +940,8 @@ class Govspider(JY):
                     if ir.status_code == 200:
                         self._last_rs_content = ir.text
                         self.iv8_env(ir.text)
+                        # iv8_env 刷新了 dUs8TeLcaHgjP，必须同步更新 fiKxeghI
+                        self.fiKxeghI = self.cookies.get("dUs8TeLcaHgjP", "")
                         logger.success("首页cookie已更新")
                     return True
                 else:
@@ -945,20 +970,27 @@ class Govspider(JY):
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36"),
         }
         if html is None:
-            try:
-                resp = requests.get("https://shiming.gsxt.gov.cn/index.html",
-                                    headers=page_headers, cookies=self.cookies,
-                                    proxies=self.proxies, timeout=(10, 15), verify=False)
-                if resp.status_code == 200:
-                    safe_update(self.cookies, resp.cookies.get_dict())
-                    html = resp.text
-                    sources.append("index.html(200)")
-                else:
-                    logger.warning(f"[Token] index.html返回{resp.status_code}")
-                    return ""
-            except Exception as e:
-                logger.warning(f"[Token] 获取index.html失败: {e}")
-                return ""
+            # 优先尝试搜索页（登录后实际所在的页面），index.html可能被405拒绝
+            for try_url in [
+                "https://shiming.gsxt.gov.cn/corp-query-search-1.html",
+                "https://shiming.gsxt.gov.cn/index.html",
+            ]:
+                try:
+                    resp = requests.get(try_url,
+                                        headers=page_headers, cookies=self.cookies,
+                                        proxies=self.proxies, timeout=(10, 15), verify=False)
+                    if resp.status_code == 200:
+                        safe_update(self.cookies, resp.cookies.get_dict())
+                        html = resp.text
+                        sources.append(f"{try_url.split('/')[-1]}(200)")
+                        break
+                    else:
+                        logger.warning(f"[Token] {try_url}返回{resp.status_code}")
+                except Exception as e:
+                    logger.warning(f"[Token] 获取{try_url}失败: {e}")
+            if html is None:
+                logger.warning("[Token] 所有页面获取失败，使用默认token=2016")
+                return "2016"
 
         # Pattern 1: JS变量 var token = "..."
         m = re.search(r'var\s+token\s*=\s*"(\d+)"', html)
@@ -1044,6 +1076,7 @@ class Govspider(JY):
                 method = "POST"
                 req_data = dict(data_template)
                 req_data["page"] = str(pg)
+                req_data["fiKxeghI"] = self.fiKxeghI or self.cookies.get("dUs8TeLcaHgjP", "")
                 for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
                     req_data[k] = params.get(k, "")
                 rt = lambda: self._search_paginate_retry(company, params, data_template, pg)
@@ -1057,7 +1090,6 @@ class Govspider(JY):
                 req_params = {
                     "searchword": company, "page": str(pg),
                     "tab": data_template.get("tab", "ent_tab"),
-                    "tab_ekeyareas": data_template.get("tab_ekeyareas", "0"),
                     "province": data_template.get("province", ""),
                     "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
                     "token": data_template.get("token", ""),
@@ -1068,7 +1100,7 @@ class Govspider(JY):
                 rt = lambda: self._search_paginate_retry(company, params, data_template, pg)
                 r = self.unified_request(
                     url=url, method=method, params=req_params,
-                    timeout=(10, 20), custom_cookie=self.cookie, retry_func=rt)
+                    timeout=(10, 20), retry_func=rt)
 
             if r.status_code != 200:
                 logger.warning(f"[搜索] {company} 第{pg}页返回{r.status_code}，终止翻页")
@@ -1128,6 +1160,7 @@ class Govspider(JY):
         logger.info(f"[搜索] {company} 完成: 共{len(all_data)}条, {pg - page + 1}页")
         return all_data
 
+
     def _search_paginate_retry(self, company, params, data_template, page):
         """搜索翻页的重试函数（刷新验证码+RS6 cookie后重试）
 
@@ -1144,18 +1177,17 @@ class Govspider(JY):
         if page == 1:
             data = dict(data_template)
             data["page"] = str(page)
+            data["fiKxeghI"] = self.fiKxeghI or self.cookies.get("dUs8TeLcaHgjP", "")
             for k in ["lot_number", "captcha_output", "pass_token", "gen_time"]:
                 data[k] = params.get(k, "")
             return self.unified_request(
                 url="https://shiming.gsxt.gov.cn/corp-query-search-1.html",
                 method="POST", data=data,
-                custom_cookie=self.cookie,
                 timeout=(10, 20), retry_func=None)
         else:
             req_params = {
                 "searchword": company, "page": str(page),
                 "tab": data_template.get("tab", "ent_tab"),
-                "tab_ekeyareas": data_template.get("tab_ekeyareas", "0"),
                 "province": data_template.get("province", ""),
                 "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
                 "token": data_template.get("token", ""),
@@ -1166,7 +1198,6 @@ class Govspider(JY):
             return self.unified_request(
                 url="https://shiming.gsxt.gov.cn/corp-query-search-advancetest.html",
                 method="GET", params=req_params,
-                custom_cookie=self.cookie,
                 timeout=(10, 20), retry_func=None)
 
 
@@ -1197,7 +1228,7 @@ class Govspider(JY):
 
                 # Step 3: 首次搜索 — 用 Govspider 默认 XHR headers
                 data_template = {
-                    "tab": "ent_tab", "tab_ekeyareas": "0", "province": "",
+                    "tab": "ent_tab", "tab_ekeyareas": "0", "province": "100000",
                     "geetest_challenge": "", "geetest_validate": "", "geetest_seccode": "",
                     "captchaId": "b608ae7850d2e730b89b02a384d6b9cc",
                     "token": token, "searchword": company, "page": str(page)
@@ -1219,6 +1250,7 @@ class Govspider(JY):
 
         return []
 
+
     # ================================================================
     # 数据解析工具
     # ================================================================
@@ -1233,6 +1265,7 @@ class Govspider(JY):
                 return text
             else:
                 return text
+
 
     @staticmethod
     def contains_html_or_name_colon(text):
@@ -1282,13 +1315,12 @@ class Govspider(JY):
             logger.error(f"[vhpage] {info.get('name','?')} 详情页{MAX_VHPAGE_RETRIES}次重试均失败，放弃")
             return None, None
 
-        # 浏览器 RS6 XHR Hook 会自动给详情页 URL 追加 ?fiKxeghI=<token>
-        # Python 请求必须手动追加，否则被创宇盾/WAF拦截
+        # 浏览器 RS6 Hook 自动给 XHR URL 追加 fiKxeghI，但 GET 请求的
+        # fiKxeghI 值由 RS6 hook 内部函数变换生成(非 dUs8TeLcaHgjP 原值)
+        # 蜘蛛无法复现该变换 → 不追加 fiKxeghI，直接请求原始 URL
         detail_url = info["link"]
-        fi = self.fiKxeghI or self.cookies.get("dUs8TeLcaHgjP", "")
-        if fi and "fiKxeghI" not in detail_url:
-            detail_url += ("&" if "?" in detail_url else "?") + "fiKxeghI=" + fi
 
+        # 详情页在浏览器中是通过 RS6 XHR 加载的，使用和搜索相同的 XHR 头
         def retry_func():
             return self.unified_request(
                 url=detail_url, method='GET',
@@ -2048,17 +2080,16 @@ class Govspider(JY):
         """
         company_name = info.get("name", "unknown")
         logger.info(f"\n{'='*60}\n采集公司: {company_name}\n{'='*60}")
+        result = {"company": company_name, "detail": {}, "sections": {}}
 
         try:
-            # 第0步：确保session新鲜
-            self._ensure_session_fresh()
             # 第一步：获取公司详情页，提取基本信息 + 各板块URL
+            # 注意：不调用 _ensure_session_fresh()——它可能改变cookie导致搜索返回的详情页链接失效
             comlist, detailData = self.vhpage(info)
             if comlist is None:
                 logger.error(f"[详情页] {company_name} 详情页获取失败，跳过该公司")
-                return {"company": company_name, "detail": {}, "sections": {}, "error": "详情页获取失败"}
+                return result
             logger.info(f"[详情页] URL提取完成, 板块数={len(comlist)}")
-            result = {"company": company_name, "detail": {}, "sections": {}}
             # 第二步：年报 (电话+规模) — 必须先获取，为detailData补充字段
             try:
                 iphone = self._get_annual_report_info(comlist, detailData, company_name)
@@ -2340,6 +2371,7 @@ class Govspider(JY):
             # user = {"user": "19225906427", "pwd": "hjS564789"}
             # user = {"user": "18965736502", "pwd": "HNg786346"}
             # user = {"user": "18060829306", "pwd": "Kof989345"}
+            # user = {"user": "15391558490", "pwd": "Dlj199106"}
             user = self.swich_user()
 
         # 加载已处理记录（断点续采）

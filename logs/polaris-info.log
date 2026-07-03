@@ -3064,3 +3064,64 @@
 2026-06-24 14:12:38.551 | INFO     | 25332:19980 | __main__:next_login:1796 - main_qe pass盾异常:expected string or bytes-like object
 2026-06-24 14:12:38.551 | INFO     | 25332:19980 | __main__:main:1819 - 主流程异常: 访问首页异常！！
 2026-06-24 14:12:38.551 | INFO     | 25332:19980 | __main__:close_mongo_connection:1768 - MongoDB连接已关闭
+2026-07-03 10:49:22.597 | INFO     | 16520:22996 | __main__:next_login:1731 - 使用账号: 18050400868
+2026-07-03 10:49:22.680 | INFO     | 16520:22996 | __main__:main_qe:480 - 加速乐第一次请求的状态码:<Response [521]>
+2026-07-03 10:49:22.780 | INFO     | 16520:22996 | __main__:jsl:331 - 加速乐第二次请求的状态码:<Response [521]>
+2026-07-03 10:49:22.830 | INFO     | 16520:22996 | __main__:resp_jsl:366 - 加速乐第三次请求得到瑞数返回的状态码:<Response [412]>
+2026-07-03 10:49:23.256 | SUCCESS  | 16520:22996 | __main__:first_req:310 - <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta id="9pRNs2oivtAo" content="oW6HE2k0_FJnCNxDOLizl5g7TI7GA6ZbIYVZAJRiZ1ZjGoe0UTE6avi9DcaP_zulssQ6bA9TKpcYjhKPpKk4Gwyipn21yhKu66FrmnI8CDUT6J_F2lT857TUFoVLnnOkGHiKcg2B9sbL2728V_D5TGpHHOb9YhM5F2uBoCQZPB7ndT4JYxnRuq" r='m'><!--[if lt IE 9]><script r='m'>document.createElement("section")</script><![endif]--><script src="/1eeb27c_268ab095d.js"></script>
+<script src="/ctct_bundle_c4152658.js"></script>
+<script type="text/javascript" r='m'>$_ts=window['$_ts'];if(!$_ts)$_ts={};$_ts.nsd=78150;$_ts.cd="qheSrPqlxpLlEAGdqrLcDGWshuZqDGlFrfWMHaqKtrAFqclmDGQsraAFW1gVrrVdqrLcDGWshSLDluWkDGVsraEFqPgYrclFrrWursZqDGqFqpWBDGQfrpLcxaQkHaqFqrLrlnZqr1gKrc3dqr3LmuZqmPG3DGQsraAXr1gUrcWdqrLrDG3shuZqhGAFrpWBHaqFqSLqlnZdqcgDDGQshSLlhfGlDuZqDGqXqpWBHaqFrSLllnZdqrLchGWshSLqhOtQJsAoWuW0ifrWGoXoxVbW0NiNp7r8UfTB7GupXCTXeqhz8PEr8fdXqnhPGecerTfkVKQmEqJPqtZkq1LmfOrj00xHJK9uIO-gF9ze3Dr71tYG1UwKQvxheufJ32Va32M6KO7ZJmR6KIRfpuyfVvQynbRWRbpH3CX23DESVoxYwwwliDxAHkpbnbmuF92XVvoJVkztJbNN8e2vW9yv3UAB-OLSRCW0Jnd0QkzZQTmjRFzWAbxwVbLB-OLSRCW0Jnd0QkzGJlNQMBxRM2TKJYlB-OLSRCW0Jnd0QkzwYVYYFH2fWDN9pDZBeoq4J2pOwC4wWDyE3srjiXyDYC7uMoxxnDT1Qkys3KMbK9xlpDespIGgiKyfYCquTuw9M2xBtODvWbxOJOAjF50gsUxAJ0TMTTxJMoRPtODvWbxOJOAjF50gQlrG3lRjZKmBVURXtODvWbxOJOAjF50giUYU1UQuZKNCQVpLH6IesKxp3OYviwauWqVlJaV6OKz0QUY0HOFjJuG0WsVZJtA6Jk3kJu0adDVurOASJGXBWuQSWOg0JF0TcsqSWO36-sVSWSKrt9loFP0fUKejl2SBYr-NmTRzWQd868Z7rR5wqaVqqGW95w7NfQyqes_eeBzkpRyD6Bq-b8CDcbS5Q4Qws1GC649E-uW0JkVCWO1NqOlHJkqZWjg6JOauJ1eu4bp-1TRxpKOMpU3uUlr8RZyVKVfBIbSJZCfs1urN1V4SF2YDwOemAZyRqqASrOAqj3laWvZ-RKkehCmLwnz2QIVB3URLtCY6enePRDg-RbkjhCx7FnzbMigB3vZ6tCQzdKxPtKRLF16eQ6qNRvp6hITawP2fRvqz5be7tKmLRn6_MDJetKJ-wMxvMKEN3b2z7bRBQ12PID1nRKS9tKmL3-x2MoWN3KzB7bYBF6l-3b4jhCwfRnzOFIlBRCSOtCJ47bz7w12BwoDnF6pbtKyvM-xjMbWNMbNL7bNXwP2XwDcnFvJjtKT2Q4xN3UJ9tCyS5CA7M6YGtDBzhCNCFb9LMIwfhD2j3cf7jbE7FDp6tDu6RnSLMDLLMHYThDfj3nf7ZUV7FoV0tDuXJnSLwK3LMiybRn2LwCWzZ6JatKf0M16S3KLNFbpZhIm9Rn2jFC3zZKe2tKNu3P6SwKlNwKR6h8yG3UVNwCrv7vJvFc26MKtnQCS7tUwLFiT6hoY-3cfS4bg7wUY0tooXwnSTwUJZh8yaRc2TIPfSyCq7wDSftokj8nS0RbfuW4xS3126Rb9z4DxntUwP3n67RvWNwCLLQdJT3P26QCEz4owzw120RbCnQDRetUp-h8TTRn2CQDVz4UpbtUR5wn6j3vENQKR5h8N98P2SMbEz_bNb3n2uF6H7RbyStUJaR4x68olNQUw27vYuwP2Sw6FnwUfftUr2w4x0RKwTt6J7dne6FoW-QC4gR1SnFbmPW4x0Qo3NQDmOZnegRCG-ID6zh6fNwvZL8IJBhoTTFPfy4KZ7IUZ-IP69FvqmqYGGQIWoUnmbJar8Xbw0qYLO3D1wWOG6ruqSqtZcWAVmraAljkWaJsVcWubBJOqmruVnqtgkcsq6Ju3njuLSJaVDJqcB";if($_ts.lcd)$_ts.lcd();</script><script type="text/javascript" charset="utf-8" src="/cb4UuQtIG8gU/O3mmzGd2Kbfp.091bf33.js" r='m'></script></head>
+<body>
+</body>
+</html>
+<script type="text/javascript" r='m'>_$nj();</script>
+<a href="/cb4UuQtIG8gU/eb8174c5/P1ZSgH_ixmk_/Tru3-q3l7PAo/Kse39QUdMf04" style="display:none">elmA3ZNd2tze</a>
+
+2026-07-03 10:49:23.257 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:23.541 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:23.541 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: azBaB1gJfY5Uypib32fEvT4EuPmrOH...
+2026-07-03 10:49:24.481 | SUCCESS  | 16520:22996 | __main__:send:633 - 验证码识别成功！！
+2026-07-03 10:49:24.864 | INFO     | 16520:22996 | __main__:loginuser:732 - loginuser: status=200
+2026-07-03 10:49:24.864 | SUCCESS  | 16520:22996 | __main__:loginuser:740 - 登录成功
+2026-07-03 10:49:24.931 | SUCCESS  | 16520:22996 | __main__:next_login:1740 - 账号 18050400868 登录完成
+2026-07-03 10:49:24.931 | INFO     | 16520:22996 | __main__:main:1762 - >>> 正在处理公司: 【914108006659708962】 <<<
+2026-07-03 10:49:24.931 | INFO     | 16520:22996 | __main__:detilinfo:1653 - ********************************************************************************
+2026-07-03 10:49:24.931 | INFO     | 16520:22996 | __main__:detilinfo:1654 - 开始采集: 914108006659708962
+2026-07-03 10:49:24.931 | INFO     | 16520:22996 | __main__:detilinfo:1655 - ********************************************************************************
+2026-07-03 10:49:24.931 | INFO     | 16520:22996 | __main__:detilinfo:1659 - [搜索] 正在搜索公司...
+2026-07-03 10:49:26.011 | SUCCESS  | 16520:22996 | __main__:send:633 - 验证码识别成功！！
+2026-07-03 10:49:26.011 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:26.431 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:26.431 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: afRs1QuvgnLD_yIqWCiVAzgIWo_t6g...
+2026-07-03 10:49:26.667 | INFO     | 16520:22996 | __main__:getdata:1065 - {'name': '中国农业银行股份有限公司焦作山阳商城支行', 'link': 'https://shiming.gsxt.gov.cn/%7B91E20503A00A237567617AD0C200A80B0D281406AC894B9770DA797F5AA0A8AEB590528E69C3FFA97FDC8A5C607B47EDC99A15A27063D84053DC4CD4C7CAFBDA8B488B488BD7F6A764F536F536F536F5A401BC56BC7F2761349C66498D9F5DF57B60C3D1A5F9A5F9442A164096AA8F27354110D310D310D3-1783046965537%7D', 'legalName': '张红旗', 'business_status': '注销', 'gszch': '', 'tyxydm': '', 'dateOfEstablishment': '1998年04月17日', 'oldCompanyNameList': []}
+2026-07-03 10:49:26.667 | INFO     | 16520:22996 | __main__:detilinfo:1666 - [搜索] 找到 1 家企业
+2026-07-03 10:49:26.667 | INFO     | 16520:22996 | __main__:detilinfo:1674 - 
+[1/1] 处理: 中国农业银行股份有限公司焦作山阳商城支行
+2026-07-03 10:49:26.667 | INFO     | 16520:22996 | __main__:_process_single_company:1587 - 
+============================================================
+采集公司: 中国农业银行股份有限公司焦作山阳商城支行
+============================================================
+2026-07-03 10:49:26.667 | INFO     | 16520:22996 | __main__:vhpage:866 - ------------------提取工商数据----------------
+2026-07-03 10:49:26.667 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:42.553 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:42.553 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: aQCt3RnImViEVMwtrTdHHSTuyJkDKR...
+2026-07-03 10:49:42.619 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:42.868 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:42.869 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: awXhTxrG2FOmdRWLPPvyMCYgBco2s1...
+2026-07-03 10:49:48.231 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:48.511 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:48.511 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: a2KyO9ah0mcsh5mF6btJZLz2pVClXn...
+2026-07-03 10:49:53.911 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:54.168 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:54.168 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: axBFTkyG4BFDnRtg3agI-0BUTzOnf0...
+2026-07-03 10:49:59.555 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:49:59.793 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:49:59.794 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: aBw2Spx6k31zuv9FblZur5ej_JJ4qZ...
+2026-07-03 10:50:05.288 | SUCCESS  | 16520:22996 | __main__:iv8_env:393 - ----------------瑞数----------------
+2026-07-03 10:50:05.569 | INFO     | 16520:22996 | __main__:iv8_env:455 - _publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArqeSZx...
+2026-07-03 10:50:05.569 | INFO     | 16520:22996 | __main__:iv8_env:458 - fiKxeghI: aTC8RaPd6AMiEpXMf5lA_BNfMTY3-D...
+2026-07-03 10:50:08.011 | INFO     | 16520:22996 | __main__:close_mongo_connection:1721 - MongoDB连接已关闭
